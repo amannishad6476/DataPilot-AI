@@ -639,9 +639,6 @@ class DemoWorkflowExecutor(BaseWorkflowExecutor):
             "issues_found": all_issues
         }
 
-        # Track connector activity metrics
-        connector_registry.record_call("public_webpage", True, latency_ms=115.0, status_code=200)
-
         timeline.append({
             "id": str(uuid.uuid4()),
             "timestamp": datetime.now(timezone.utc).isoformat(),

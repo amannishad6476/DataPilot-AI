@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+import time
 from app.services.connectors.registry import connector_registry
 from app.services.connectors.base import ConnectorDescriptor
 from app.services.connectors.n8n_connector import N8nWebhookConnector
@@ -27,16 +28,26 @@ def list_registered_connectors():
 
 @router.get("/{connector_id}/health")
 async def check_connector_health(connector_id: str):
-    """Verifies health and connectivity of a specific connector."""
+    """Verifies health and connectivity of a specific connector with live latency tracking."""
     conn = connector_registry.get(connector_id)
     if not conn:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Connector '{connector_id}' not found")
+    start = time.perf_counter()
     healthy = await conn.health_check()
+    lat = round((time.perf_counter() - start) * 1000, 2)
+    connector_registry.record_call(
+        connector_id=connector_id,
+        success=healthy,
+        latency_ms=lat,
+        status_code=200 if healthy else 503,
+        error=None if healthy else "Ping test failed"
+    )
     return {
         "connector_id": connector_id,
         "name": conn.name,
         "is_healthy": healthy,
-        "status": conn.health_status.value
+        "latency_ms": lat,
+        "status": "HEALTHY" if healthy else "UNAVAILABLE"
     }
 
 

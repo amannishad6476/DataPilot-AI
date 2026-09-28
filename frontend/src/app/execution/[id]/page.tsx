@@ -70,17 +70,25 @@ export default function ExecutionPage({ params }: { params: Promise<{ id: string
 
   if (error || !runStatus) {
     return (
-      <div className="max-w-xl mx-auto my-12 p-6 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-center space-y-4">
-        <AlertCircle className="w-10 h-10 text-rose-400 mx-auto" />
-        <h2 className="text-lg font-bold text-white">Execution Error</h2>
-        <p className="text-xs text-rose-200">{error || 'Could not fetch run details.'}</p>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-xs font-semibold text-white hover:bg-slate-700"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Studio
-        </Link>
+      <div className="max-w-xl mx-auto my-16 p-8 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-center space-y-4">
+        <AlertCircle className="w-12 h-12 text-rose-400 mx-auto" />
+        <h2 className="text-lg font-bold text-white">Execution Run Not Available</h2>
+        <p className="text-xs text-rose-200">{error || 'Could not retrieve live execution status for this run ID.'}</p>
+        <div className="flex items-center justify-center gap-3 pt-3">
+          <Link
+            href="/history"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-white hover:bg-slate-700 transition-colors"
+          >
+            <span>View All Runs</span>
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 text-xs font-bold hover:bg-cyan-400 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Studio</span>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -127,18 +135,31 @@ export default function ExecutionPage({ params }: { params: Promise<{ id: string
               {runStatus.status.toUpperCase()}
             </span>
 
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-slate-900 text-slate-300 border border-slate-800 uppercase">
-              {runStatus.execution_mode} Engine
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold border ${
+                runStatus.execution_mode === 'real'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : runStatus.execution_mode === 'n8n'
+                  ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                  : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
+              }`}
+            >
+              {runStatus.execution_mode === 'real'
+                ? 'REAL CONNECTOR'
+                : runStatus.execution_mode === 'n8n'
+                ? 'N8N AUTOMATION'
+                : 'DEMO SANDBOX'}
             </span>
 
             {/* Self-Healing / Fallback Status Badge */}
-            {runStatus.error_message?.includes('fallback') ? (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                Fallback Active (Resilient Backup)
+            {runStatus.error_message?.toLowerCase().includes('fallback') ? (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                Resilient Fallback Engaged
               </span>
             ) : runStatus.execution_mode === 'real' ? (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                Primary Connector Active
+                Primary Permitted Connector
               </span>
             ) : null}
           </div>

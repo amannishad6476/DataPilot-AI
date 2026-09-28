@@ -1,62 +1,91 @@
 # DATA PILOT AI
 > **"From Natural Language to Actionable Data."**
 
-An autonomous, AI-powered Data Intelligence Platform that dynamically understands natural-language data collection requests, constructs custom Directed Acyclic Graph (DAG) extraction workflows, visualizes them interactively, executes them across real permitted source connectors and automation engines with full RFC validation and fuzzy similarity deduplication, and delivers actionable datasets with 100% source evidence traceability.
+An autonomous, enterprise-grade AI Data Intelligence Platform that translates natural language data collection requests into dynamic Directed Acyclic Graph (DAG) pipelines, executes them across permitted source connectors and automation engines, validates data integrity with RFC standards, deduplicates entities via fuzzy similarity matching, and delivers actionable datasets backed by 100% verifiable source evidence.
 
 ---
 
 ## 🌟 Hackathon Key Differentiators
 
-Unlike traditional scrapers that rely on hardcoded keyword-to-script mappings or static workflows pretending to be AI, **DATA PILOT AI** features:
+Unlike traditional scrapers that rely on hardcoded keyword-to-script mappings or static mock workflows, **DATA PILOT AI** provides:
 
 1. **Genuinely Dynamic AI DAG Planner**:
-   - The LLM dynamically analyzes the user's domain, requested fields, criteria, and constraints.
-   - It synthesizes a unique, multi-stage Directed Acyclic Graph (`steps`, `depends_on`, `action`, `target_fields`) customized to the request.
-   - Works with OpenAI, Google Gemini, or the offline-capable **Dynamic Semantic Planner** with zero configuration required.
+   - The LLM dynamically analyzes the domain, criteria, constraints, and requested schema.
+   - Decomposes requests into a typed, dependency-graphed DAG (`steps`, `depends_on`, `action`, `target_fields`).
+   - Formulates explainable **AI Planning Directives & Rationale** displayed directly on the DAG canvas.
+   - Functions with OpenAI (`gpt-4o`), Google Gemini (`gemini-2.5-flash`), or the offline-capable **Dynamic Semantic Planner** with zero configuration required.
 
-2. **Permitted Source Connector Registry (Phase 2)**:
-   - Does not allow LLMs to blindly scrape arbitrary endpoints.
-   - Connects to an explicit **ConnectorRegistry** (`BaseSourceConnector`) enforcing domain whitelists, rate limits, robots.txt compliance, and SSRF prevention.
+2. **Permitted Source Connector Registry & SSRF Firewall**:
+   - Strictly prevents arbitrary, uncontrolled external requests.
+   - All executions pass through the **ConnectorRegistry** (`BaseSourceConnector`) enforcing domain whitelists, rate limits, robots.txt compliance, and an egress SSRF firewall blocking private subnets (RFC 1918), loopback, link-local, and cloud metadata (`169.254.169.254`).
    - Built-in connectors:
      - `PublicWebPageConnector`: Live HTTP fetch, HTML parsing, JSON-LD microdata, and contact extraction.
      - `JsonFeedConnector`: Public REST API and open-data catalog ingestion.
-     - `N8nWebhookConnector`: Multi-app workflow dispatch and ready-to-use n8n workflow template.
+     - `N8nWebhookConnector`: Multi-app workflow dispatch and exportable n8n workflow template.
 
-3. **Resilient Fallback & Error Handling**:
-   - If a real external source experiences timeouts, DNS resolution failures, or connection errors, the engine never silently crashes or leaves the user hanging.
-   - Automatically activates a resilient fallback pipeline with transparent audit notices (`Notice: External connector fallback activated`) and provenance markers.
+3. **Three Explicit Execution Modes**:
+   - `DEMO SANDBOX`: Deterministic local simulation demonstrating full normalization, validation, and deduplication without external network dependencies.
+   - `REAL CONNECTOR`: Live HTTP extraction against permitted public web portals with resilient fallback protection.
+   - `N8N AUTOMATION`: Dispatches parameters to an external n8n self-hosted or cloud webhook workflow.
 
-4. **Similarity-Based Deduplication (Beyond Exact Matching)**:
-   - Evaluates canonical root web domains (e.g. `tcs.com` vs `www.tcs.com/careers`).
-   - Computes Jaro-Winkler string similarity and token Jaccard overlap on entity names (e.g. `Tata Consultancy Services Ltd` vs `Tata Consultancy Services (Lucknow Office)`).
-   - Merges complementary attributes so the final record has the richest available contact data.
+4. **Self-Healing Fallback & Audit Stream**:
+   - If an external source encounters timeouts, DNS resolution errors, or HTTP failures, the engine activates resilient fallback mechanisms, preserving partial data and logging audit notices.
+   - Emits a real-time `TimelineEvent` audit stream tracking progression, levels, and durations.
+   - Supports graceful user cancellation (`POST /api/runs/{run_id}/cancel`).
 
-5. **Multi-Stage RFC Data Validation & Integrity Scoring**:
-   - Validates RFC 5322 email syntax, E.164 phone digit criteria, and accessible HTTP/HTTPS URL formats.
-   - Calculates a per-record confidence score (e.g., 98% verified) and flags issues transparently for review.
+5. **Multi-Stage RFC Data Validation & Normalization Audit**:
+   - Validates RFC 5322 email syntax, E.164 phone digit formats, and accessible HTTP/HTTPS URL protocols.
+   - Granular field-level statuses: `VALID`, `INVALID`, `MISSING`, or `NEEDS_REVIEW`.
+   - Detailed normalization audit trail tracks transformations applied to each field (e.g. `added_https_scheme`, `e164_standardized`, `stripped_tracking_parameters`).
 
-6. **100% Traceability & Citation Auditing**:
-   - Every cell links directly to its verified public source URL.
-   - Captures original text snippets and collection timestamps in the interactive **Evidence Drawer**.
+6. **Similarity-Based Deduplication (Beyond Exact Matching)**:
+   - Canonical root web domain extraction (e.g. `tcs.com` vs `www.tcs.com/careers`).
+   - Computes Jaro-Winkler string similarity and token Jaccard overlap on entity names.
+   - Merges complementary attributes so the final consolidated record retains the richest contact data.
+
+7. **Data Quality & Mathematical Confidence Analytics**:
+   - Real, calculated metrics (zero fabricated statistics):
+     - Valid Pass Rate (`%`)
+     - Evidence Coverage (`%`)
+     - Deduplication Reduction Yield (`%`)
+     - Average Mathematical Confidence Score
+     - Confidence Breakdown (`HIGH`, `MEDIUM`, `LOW` distributions)
+     - Flagged issues identified and cleaned
+
+8. **Run History, Non-Destructive Re-run & Side-by-Side Comparison**:
+   - Complete execution archive with per-run telemetry and status tracking.
+   - Non-destructive re-runs spawn fresh run instances with unique UUIDs.
+   - Select any two runs to perform side-by-side comparative analysis: record deltas, confidence shifts, and entity drift (new entities, persistent entities, absent entities).
+
+9. **Source Connectors & Gateway Health Dashboard**:
+   - Dedicated health monitoring dashboard (`/connectors`) displaying total requests, success rates, average latency, and live ping testing.
 
 ---
 
-## 🏗️ Architecture & Layer Separation
+## 🏗️ Architecture & Pipeline Flow
 
 ```
-DATA PILOT AI
-├── 1. Prompt Understanding      (FastAPI Natural Language Ingestion)
-├── 2. Workflow Planning         (LLM Planner: OpenAI / Gemini / Dynamic Semantic Engine)
-├── 3. Workflow Validation       (Strict Pydantic JSON Schema DAG Verification)
-├── 4. Workflow Visualization    (Next.js + React Flow @xyflow/react Interactive DAG)
-├── 5. Source Selection          (ConnectorRegistry: Public Web, JSON Feeds, n8n)
-├── 6. Workflow Execution        (Real Permitted Connector + Resilient Fallback + Demo Sandbox)
-├── 7. Data Processing           (DataNormalizer: canonical URLs, cleaned phones, emails)
-├── 8. Integrity Validation      (DataValidator: RFC email, phone format, URL reachability)
-├── 9. Similarity Deduplication  (SimilarityDeduplicator: Jaro-Winkler, Levenshtein, Domain)
-├── 10. Evidence & Traceability  (EvidenceRecord: public source URL, snippet proof, confidence)
-├── 11. Dataset Management       (DatasetService: search, validity filter, dynamic sorting)
-└── 12. Workflow History         (SQLAlchemy Models: archive, inspect, and one-click rerun)
+User Prompt (Natural Language)
+       ↓
+Dynamic AI Planner (Intent, Schema, Validation & Deduplication Reasoning)
+       ↓
+DAG Workflow Visualizer (@xyflow/react Interactive Graph)
+       ↓
+Source Connector Execution (DEMO SANDBOX | REAL CONNECTOR | N8N AUTOMATION)
+       ↓
+Raw Data Collection (HTML / JSON / Webhook)
+       ↓
+Normalization & Audit Logging (Canonical URLs, Cleaned Phones, Emails)
+       ↓
+RFC & Format Validation (Field-level VALID / INVALID / MISSING status)
+       ↓
+Fuzzy Similarity Deduplication (Jaro-Winkler, Levenshtein, Domain Key)
+       ↓
+Evidence Lineage & Citation Binding (100% Traceable Source URLs & Quotes)
+       ↓
+Actionable Dataset Table (Column Picker, Confidence Tabs, CSV/JSON Export)
+       ↓
+Analytics & Comparison Hub (Run Deltas, Entity Drift, Quality Metrics)
 ```
 
 ---
@@ -73,7 +102,7 @@ DATA PILOT AI
 ### Backend
 - **Framework**: FastAPI (Python 3.10+)
 - **Validation**: Pydantic v2 & Pydantic-Settings
-- **ORM / Database**: SQLAlchemy 2.0 with SQLite (Zero-config local) & PostgreSQL-ready schema
+- **ORM / Database**: SQLAlchemy 2.0 with SQLite (Zero-config local) & PostgreSQL-ready models
 - **Connectors**: HTTPX (Asynchronous HTTP/REST & Webhook querying)
 - **Testing**: Pytest & Pytest-Asyncio
 
@@ -89,7 +118,7 @@ DATA PILOT AI
 
 ### Step 1: Start the FastAPI Backend
 
-1. Open a terminal and navigate to `backend/`:
+1. Navigate to `backend/`:
    ```bash
    cd backend
    ```
@@ -109,7 +138,7 @@ DATA PILOT AI
    ```bash
    cp .env.example .env
    ```
-   *Note: If no API keys are provided, the platform automatically runs using the high-intelligence **Dynamic Semantic Planner** with zero setup!*
+   *Note: If no API keys are provided, the platform automatically runs using the built-in **Dynamic Semantic Planner** with zero setup!*
 
 4. Run the FastAPI server:
    ```bash
@@ -121,7 +150,7 @@ DATA PILOT AI
 
 ### Step 2: Start the Next.js Frontend
 
-1. Open a second terminal and navigate to `frontend/`:
+1. In a second terminal, navigate to `frontend/`:
    ```bash
    cd frontend
    ```
@@ -131,23 +160,22 @@ DATA PILOT AI
    npm run dev
    ```
 
-3. Open your browser and visit:
+3. Open your browser and navigate to:
    ```
    http://localhost:3000
    ```
 
 ---
 
-## 🧪 Running Automated Tests
+## 🧪 Automated Test Verification
 
-To run the complete backend test suite verifying connectors, real execution, fallback resilience, n8n integration, dynamic planning, and similarity deduplication:
+To run the complete backend test suite:
 
 ```powershell
-cd backend
-.\venv\Scripts\python.exe -m pytest tests -v
+$env:SQLALCHEMY_CYTHON="0"; .\backend\venv\Scripts\python.exe -m pytest -v
 ```
 
-All 12 test suites pass cleanly:
+All 16 test suites pass cleanly with mocked/offline isolation:
 - `test_health_check`
 - `test_e2e_workflow_lifecycle`
 - `test_connector_registry`
@@ -155,13 +183,17 @@ All 12 test suites pass cleanly:
 - `test_public_webpage_extraction` (Live metadata, email/phone regex, structured schema)
 - `test_n8n_template_generation` (n8n JSON workflow specification)
 - `test_similarity_deduplication` (Fuzzy Jaro-Winkler & root domain matching)
+- `test_planner_reasoning` (Explainable AI planning directives)
+- `test_validator_detailed_and_normalizer_audit` (Field validation & transformation audit)
+- `test_e2e_phase3_workflow_lifecycle` (E2E run, rerun, timeline, quality, and comparison)
+- `test_run_cancellation` (Graceful execution cancellation)
 - `test_dynamic_sponsor_planner` (DAG dependency resolution)
 - `test_dynamic_job_planner` (Dynamic recruitment schema synthesis)
 - `test_connectors_api` (Connector discovery and health checking)
 - `test_n8n_endpoints` (n8n webhook receiver & template endpoints)
 - `test_real_execution_with_resilient_fallback` (Real execution + automatic fallback recovery)
 
-To run the frontend TypeScript build check:
+To run the frontend production build:
 ```bash
 cd frontend
 npm run build
@@ -169,41 +201,48 @@ npm run build
 
 ---
 
-## 🎯 Demo Walkthrough: College Fest Sponsor Intelligence
+## 🎯 3-Minute Judge Demo Script
 
-1. **Submit Request**:
-   On the landing page, select the preset prompt:
-   > *"Find 30 potential sponsors for a college technical fest in Lucknow. Collect company name, industry, website, public business email, phone, location and source. Remove duplicates and validate the results."*
+### 1. The Challenge (0:00 - 0:30)
+- *"Organizations frequently need custom web data—leads, sponsors, market data. Traditional tools either require brittle custom scrapers or offer static mock dashboards with no real validation."*
+- Open `http://localhost:3000` (DataPilot AI).
 
-2. **Inspect Generated DAG**:
-   Click **"Generate Workflow"**. The platform decomposes the request into an interactive DAG in React Flow:
-   - `Request Ingestion` &rarr; `Dynamic Source Planner` &rarr; `Public Source Discovery` &rarr; `Primary Entity Extraction` &rarr; `Contact Enrichment` &rarr; `Data Normalization` &rarr; `RFC Validation` &rarr; `Similarity Deduplication` &rarr; `Evidence Merge` &rarr; `Dataset Delivery`
-   - Select your execution mode:
-     - **Demo Sandbox**: Safe high-fidelity simulation.
-     - **Real Connector**: Live permitted HTTP extraction via `PublicWebPageConnector` with resilient fallback.
-     - **n8n Webhook**: Automated pipeline dispatch to self-hosted or cloud n8n.
-   - Click any node to view its parameters, dependencies, and target fields in the **Step Inspector Drawer**.
+### 2. Natural Language to Dynamic DAG (0:30 - 1:15)
+- Click the first example preset: *"Find 30 potential sponsors for a college technical fest in Lucknow. Collect company name, industry, website, public business email, phone, location and source. Remove duplicates and validate the results."*
+- Click **"Generate Workflow"**.
+- Point out the **AI Planning Rationale** card explaining the domain analysis, schema decisions, RFC rules, and deduplication keys.
+- Explore the interactive React Flow DAG: click nodes to view step dependencies and field mappings in the inspector.
 
-3. **Live Execution**:
-   Click **"Run Workflow"**. Watch the nodes transition in real time:
-   `Pending` &rarr; `Running (Pulsing Glow)` &rarr; `Completed (Green Check)`.
-   Observe live counters:
-   - Extracted: 33 raw candidate records
-   - Merged: 3 near-duplicates (demonstrating fuzzy Levenshtein & domain matching)
-   - Final: 30 verified sponsor records
+### 3. Execution & Resilient Fallback (1:15 - 2:00)
+- Highlight the 3 execution modes: `DEMO SANDBOX`, `REAL CONNECTOR`, `N8N AUTOMATION`.
+- Select `DEMO SANDBOX` (or `REAL CONNECTOR`), click **"Run Workflow"**.
+- Watch the live execution progression, state changes, and live **Audit Trail Timeline Stream**.
+- Show the graceful **Cancel** capability and resilient fallback handling.
 
-4. **Explore Dataset & Citations**:
-   - Filter between **"All Records"**, **"Verified Valid"**, and **"Needs Review"**.
-   - Sort columns or search across companies (e.g. `fintech`, `lucknow`, `tcs`).
-   - Click any row to open the **Evidence & Audit Trail Drawer**, displaying the exact source URL, snippet proof, and confidence score.
-   - Click **"Export Dataset"** to download as CSV or JSON.
+### 4. Mathematical Quality & Evidence Drawer (2:00 - 2:40)
+- Once execution completes, navigate to the **Intelligence Dataset** view (`/dataset/[id]`).
+- Show the **Data Quality & Mathematical Confidence Analytics** card: Valid pass rate, evidence coverage, deduplication yield, and confidence breakdown.
+- Demonstrate table filtering: switch confidence tabs (`HIGH`, `MEDIUM`, `LOW`), filter columns with the **Column Picker**, and sort.
+- Click any row to open the **Evidence & Audit Trail Drawer**:
+  - Show the per-field validation badges (`VALID`, `INVALID`, `MISSING`).
+  - Point to the normalization audit tags (e.g. `added_https_scheme`, `e164_standardized`).
+  - Click the direct source link with citation quotes proving zero fabricated data.
+- Demonstrate CSV/JSON export.
 
-5. **History & Rerun**:
-   Navigate to `/history` to review previous workflows, view past datasets, or trigger instant reruns.
+### 5. Historical Comparison & Source Health (2:40 - 3:00)
+- Navigate to **Runs & History** (`/history`):
+  - Show historical runs and non-destructive **Re-run** button (spawns fresh run instance).
+  - Select two completed runs with checkboxes and click **"Launch Comparison"**.
+  - Show side-by-side metric deltas, confidence shifts, and entity drift analytics.
+- Navigate to **Source Health** (`/connectors`):
+  - Show live connector telemetry and test latency with the **Ping Test** button.
+  - Highlight the active **SSRF Firewall** preventing private network access.
 
 ---
 
-## 🔒 Data Safety & Compliance
-- Complies strictly with public web access standards and `robots.txt`.
-- No login bypasses, CAPTCHA workarounds, or private data scraping.
-- Enforces public business endpoints only.
+## 🔒 Security & Compliance
+
+- **SSRF Protection**: Strict IP and domain validation blocks loopback (127.0.0.1, ::1), RFC 1918 private subnets (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16), link-local addresses, and cloud metadata (169.254.169.254).
+- **Public Domain Access**: Complies strictly with public web access standards and `robots.txt`.
+- **Zero Hallucination Guarantee**: All metrics, confidence scores, and validation states are deterministically calculated by backend engines. Demo data is explicitly marked as `DEMO SANDBOX DATA`.
+- **Stateless & Secure**: No hardcoded API keys or credentials; parameters pass through strict Pydantic schemas.

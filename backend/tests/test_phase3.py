@@ -145,7 +145,7 @@ def test_e2e_phase3_workflow_lifecycle():
         time.sleep(0.3)
     assert st2["status"] == "completed"
 
-    # 7. Test list workflow runs
+    # 7. Test list workflow runs & all runs across workflows
     runs_resp = client.get(f"/api/workflows/{wf_id}/runs")
     assert runs_resp.status_code == 200
     wf_runs = runs_resp.json()
@@ -153,6 +153,11 @@ def test_e2e_phase3_workflow_lifecycle():
     run_ids = [r["run_id"] for r in wf_runs]
     assert run_1_id in run_ids
     assert run_2_id in run_ids
+
+    all_runs_resp = client.get("/api/runs")
+    assert all_runs_resp.status_code == 200
+    all_runs = all_runs_resp.json()
+    assert len(all_runs) >= 2
 
     # 8. Test run comparison endpoint
     compare_resp = client.get(f"/api/runs/compare?run_a={run_1_id}&run_b={run_2_id}")

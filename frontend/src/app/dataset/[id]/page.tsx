@@ -53,17 +53,27 @@ export default function DatasetPage({ params }: { params: Promise<{ id: string }
 
   if (error || !dataset) {
     return (
-      <div className="max-w-xl mx-auto my-12 p-6 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-center space-y-4">
-        <AlertTriangle className="w-10 h-10 text-rose-400 mx-auto" />
-        <h2 className="text-lg font-bold text-white">Dataset Not Found</h2>
-        <p className="text-xs text-rose-200">{error || 'Could not retrieve records for this run.'}</p>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-xs font-semibold text-white hover:bg-slate-700"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Studio
-        </Link>
+      <div className="max-w-xl mx-auto my-16 p-8 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-center space-y-4">
+        <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto" />
+        <h2 className="text-lg font-bold text-white">Dataset Not Found or Execution Incomplete</h2>
+        <p className="text-xs text-rose-200">
+          {error || 'The execution run has not completed yet or the dataset records could not be retrieved.'}
+        </p>
+        <div className="flex items-center justify-center gap-3 pt-3">
+          <Link
+            href="/history"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-white hover:bg-slate-700 transition-colors"
+          >
+            <span>View All Runs</span>
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 text-xs font-bold hover:bg-cyan-400 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Studio</span>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -96,8 +106,20 @@ export default function DatasetPage({ params }: { params: Promise<{ id: string }
               <Table2 className="w-7 h-7 text-cyan-400" />
               <span>Intelligence Dataset</span>
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              {dataset.execution_mode.toUpperCase()} MODE
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold border ${
+                dataset.execution_mode === 'real'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : dataset.execution_mode === 'n8n'
+                  ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                  : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
+              }`}
+            >
+              {dataset.execution_mode === 'real'
+                ? 'REAL CONNECTOR'
+                : dataset.execution_mode === 'n8n'
+                ? 'N8N AUTOMATION'
+                : 'DEMO SANDBOX'}
             </span>
           </div>
 
@@ -119,6 +141,47 @@ export default function DatasetPage({ params }: { params: Promise<{ id: string }
           <ExportDropdown runId={runId} />
         </div>
       </div>
+
+      {/* Mode Provenance & Truthfulness Banner */}
+      {dataset.execution_mode === 'demo' && (
+        <div className="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-500/20 text-xs text-cyan-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse flex-shrink-0" />
+            <span>
+              <strong>DEMO SANDBOX DATA:</strong> High-fidelity local simulation validating email/phone schemas, fuzzy deduplication, and evidence traceability.
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider self-start sm:self-auto">
+            Local Deterministic Run
+          </span>
+        </div>
+      )}
+      {dataset.execution_mode === 'real' && (
+        <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/20 text-xs text-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+            <span>
+              <strong>REAL CONNECTOR EXECUTION:</strong> Live data retrieved from permitted public web sources with strict SSRF domain protection and citation proof.
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider self-start sm:self-auto">
+            Live Permitted Source
+          </span>
+        </div>
+      )}
+      {dataset.execution_mode === 'n8n' && (
+        <div className="p-3.5 rounded-xl bg-purple-950/30 border border-purple-500/20 text-xs text-purple-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse flex-shrink-0" />
+            <span>
+              <strong>N8N AUTOMATION PIPELINE:</strong> Ingested through external n8n webhook workflow with DataPilot validation and deduplication gates.
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-purple-400 uppercase tracking-wider self-start sm:self-auto">
+            Webhook Pipeline
+          </span>
+        </div>
+      )}
 
       {/* KPI Overview Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

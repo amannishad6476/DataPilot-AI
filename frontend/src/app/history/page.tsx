@@ -314,8 +314,20 @@ export default function HistoryPage() {
                           </span>
 
                           {/* Mode Badge */}
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-slate-800 text-cyan-300 border border-slate-700">
-                            {run.execution_mode} MODE
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
+                              run.execution_mode === 'real'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                : run.execution_mode === 'n8n'
+                                ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                                : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
+                            }`}
+                          >
+                            {run.execution_mode === 'real'
+                              ? 'REAL CONNECTOR'
+                              : run.execution_mode === 'n8n'
+                              ? 'N8N AUTOMATION'
+                              : 'DEMO SANDBOX'}
                           </span>
 
                           {/* Timestamp */}
@@ -575,7 +587,13 @@ export default function HistoryPage() {
                 <div className="space-y-1.5">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Mode:</span>
-                    <span className="text-slate-200 uppercase">{comparisonResult.run_a_mode}</span>
+                    <span className="text-slate-200 font-semibold">
+                      {comparisonResult.run_a_mode === 'real'
+                        ? 'REAL CONNECTOR'
+                        : comparisonResult.run_a_mode === 'n8n'
+                        ? 'N8N AUTOMATION'
+                        : 'DEMO SANDBOX'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Status:</span>
@@ -603,7 +621,13 @@ export default function HistoryPage() {
                 <div className="space-y-1.5">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Mode:</span>
-                    <span className="text-slate-200 uppercase">{comparisonResult.run_b_mode}</span>
+                    <span className="text-slate-200 font-semibold">
+                      {comparisonResult.run_b_mode === 'real'
+                        ? 'REAL CONNECTOR'
+                        : comparisonResult.run_b_mode === 'n8n'
+                        ? 'N8N AUTOMATION'
+                        : 'DEMO SANDBOX'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Status:</span>

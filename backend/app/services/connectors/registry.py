@@ -87,8 +87,12 @@ class ConnectorRegistry:
             avg_lat = round(sum(latencies) / len(latencies), 1) if latencies else 0.0
 
             if total == 0:
-                c_status = "HEALTHY"
-                details = "Configured and operational (awaiting live requests)"
+                if cid == "n8n_webhook":
+                    c_status = "UNTESTED"
+                    details = "Webhook listener ready; awaiting external n8n workflow configuration"
+                else:
+                    c_status = "UNTESTED"
+                    details = "Registered and ready for dispatch (click Ping Test or run a workflow)"
             else:
                 err_rate = errors / total
                 if err_rate == 0:

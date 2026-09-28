@@ -148,7 +148,7 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Demo Sandbox
+              DEMO SANDBOX
             </button>
             <button
               onClick={() => setExecutionMode('real')}
@@ -158,7 +158,7 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Real Connector
+              REAL CONNECTOR
             </button>
             <button
               onClick={() => setExecutionMode('n8n')}
@@ -168,7 +168,7 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              n8n Webhook
+              N8N AUTOMATION
             </button>
           </div>
 
@@ -193,15 +193,32 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Mode Sub-configuration Panel */}
+      {executionMode === 'demo' && (
+        <div className="p-4 rounded-xl bg-cyan-950/20 border border-cyan-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="space-y-1">
+            <span className="font-semibold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              Execution Mode: DEMO SANDBOX
+            </span>
+            <p className="text-slate-400">
+              Deterministic local simulation demonstrating full pipeline execution: schema extraction, normalization audit, RFC validation, similarity deduplication, and evidence lineage without live external network dependencies.
+            </p>
+          </div>
+          <span className="px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono text-[11px] whitespace-nowrap">
+            Zero Network Drift
+          </span>
+        </div>
+      )}
+
       {executionMode === 'real' && (
         <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
           <div className="space-y-1">
             <span className="font-semibold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5" />
-              Real Permitted Connector: PublicWebPageConnector
+              Execution Mode: REAL CONNECTOR (PublicWebPageConnector)
             </span>
             <p className="text-slate-400">
-              Executes live HTTP fetch, HTML parsing, metadata & contact extraction. Includes resilient fallback protection if unreachable.
+              Executes live HTTP fetch, HTML parsing, metadata & contact extraction against permitted public domains with strict SSRF domain protection and automatic resilient fallback.
             </p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -221,10 +238,10 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
           <div className="space-y-1">
             <span className="font-semibold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
               <Cpu className="w-3.5 h-3.5" />
-              n8n Automation Engine Integration
+              Execution Mode: N8N AUTOMATION Engine Integration
             </span>
             <p className="text-slate-400">
-              Dispatches execution parameters to an external n8n self-hosted or cloud webhook endpoint.
+              Dispatches execution parameters to an external n8n self-hosted or cloud webhook endpoint. Inbound responses are automatically normalized and validated.
             </p>
           </div>
           <button

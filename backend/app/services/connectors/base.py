@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse
+import ipaddress
 from pydantic import BaseModel, Field
 
 
@@ -76,8 +77,8 @@ class BaseSourceConnector(ABC):
 
     def is_domain_permitted(self, url: str) -> bool:
         """
-        Validates that the target URL complies with the allowed domains list.
-        If allowed_domains is empty or contains '*', all publicly accessible HTTP(S) domains are permitted.
+        Validates that the target URL complies with the allowed domains list and does NOT resolve
+        to private, loopback, link-local, or cloud metadata endpoints.
         """
         if not url:
             return False
@@ -86,13 +87,31 @@ class BaseSourceConnector(ABC):
             if parsed.scheme not in ["http", "https"]:
                 return False
 
-            host = parsed.netloc.lower().split(":")[0]
+            host = parsed.netloc.lower().split(":")[0].strip()
             if not host:
                 return False
 
-            # Disallow private/internal IPs to prevent SSRF
-            if host in ["localhost", "127.0.0.1", "0.0.0.0"] or host.startswith("192.168.") or host.startswith("10."):
+            # Disallow localhost and internal domain suffixes
+            if host in ["localhost", "0.0.0.0"] or host.endswith(
+                (".localhost", ".local", ".internal", ".lan", ".corp", ".home.arpa")
+            ):
                 return False
+
+            # Check if host is a raw IP address (v4 or v6)
+            try:
+                ip = ipaddress.ip_address(host)
+                if (
+                    ip.is_private
+                    or ip.is_loopback
+                    or ip.is_link_local
+                    or ip.is_reserved
+                    or ip.is_multicast
+                    or ip.is_unspecified
+                ):
+                    return False
+            except ValueError:
+                # Host is a domain name, not a raw IP address
+                pass
 
             if not self.allowed_domains or "*" in self.allowed_domains:
                 return True
