@@ -126,7 +126,18 @@ export default function ExecutionPage({ params }: { params: Promise<{ id: string
               {isFailed && <AlertCircle className="w-3.5 h-3.5" />}
               {runStatus.status.toUpperCase()}
             </span>
+
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-slate-900 text-slate-300 border border-slate-800 uppercase">
+              {runStatus.execution_mode} Engine
+            </span>
           </div>
+
+          {runStatus.error_message && (
+            <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-300 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <span>{runStatus.error_message}</span>
+            </div>
+          )}
 
           {workflow && (
             <p className="text-xs text-slate-400 max-w-2xl truncate italic">

@@ -3,6 +3,7 @@ import {
   WorkflowRunStatus,
   DatasetResponse,
   EvidenceItem,
+  ConnectorDescriptor,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -60,15 +61,36 @@ class ApiClient {
   }
 
   // Execution
-  async runWorkflow(workflowId: string, executionMode: 'demo' | 'real' = 'demo'): Promise<WorkflowRunStatus> {
+  async runWorkflow(
+    workflowId: string,
+    executionMode: 'demo' | 'real' | 'n8n' = 'demo',
+    options?: { target_url?: string; n8n_webhook_url?: string }
+  ): Promise<WorkflowRunStatus> {
     return this.fetchJson<WorkflowRunStatus>(`/workflows/${workflowId}/run`, {
       method: 'POST',
-      body: JSON.stringify({ execution_mode: executionMode }),
+      body: JSON.stringify({
+        execution_mode: executionMode,
+        target_url: options?.target_url || undefined,
+        n8n_webhook_url: options?.n8n_webhook_url || undefined,
+      }),
     });
   }
 
   async getRunStatus(runId: string): Promise<WorkflowRunStatus> {
     return this.fetchJson<WorkflowRunStatus>(`/runs/${runId}`);
+  }
+
+  // Connectors & n8n
+  async listConnectors(): Promise<ConnectorDescriptor[]> {
+    return this.fetchJson<ConnectorDescriptor[]>('/connectors');
+  }
+
+  async checkConnectorHealth(connectorId: string): Promise<any> {
+    return this.fetchJson<any>(`/connectors/${connectorId}/health`);
+  }
+
+  async getN8nTemplate(): Promise<any> {
+    return this.fetchJson<any>('/connectors/n8n/template');
   }
 
   // Dataset

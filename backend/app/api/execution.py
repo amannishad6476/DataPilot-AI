@@ -52,7 +52,13 @@ def run_to_status(run: WorkflowRun) -> WorkflowRunStatus:
     )
 
 
-async def execute_in_background(workflow_id: str, run_id: str, mode: str):
+async def execute_in_background(
+    workflow_id: str,
+    run_id: str,
+    mode: str,
+    target_url: Optional[str] = None,
+    n8n_webhook_url: Optional[str] = None
+):
     """Background runner with isolated DB session."""
     db = SessionLocal()
     try:
@@ -62,8 +68,12 @@ async def execute_in_background(workflow_id: str, run_id: str, mode: str):
             logger.error(f"Cannot execute run {run_id}: Workflow or Run missing in DB")
             return
 
-        executor = real_executor if mode == "real" else demo_executor
-        await executor.execute(wf, run, db)
+        if mode in ["real", "n8n"]:
+            await real_executor.execute(
+                wf, run, db, target_url=target_url, n8n_webhook_url=n8n_webhook_url
+            )
+        else:
+            await demo_executor.execute(wf, run, db)
     except Exception as e:
         logger.error(f"Run {run_id} execution failed: {e}", exc_info=True)
         try:
@@ -87,7 +97,7 @@ async def start_workflow_run(
 ):
     """
     Initiates execution of a planned workflow in background.
-    Supports 'demo' (mock high-fidelity pipeline) and 'real' (live permitted sources connector).
+    Supports 'demo' (mock high-fidelity pipeline), 'real' (live permitted sources connector), and 'n8n' (webhook pipeline).
     """
     wf = db.query(Workflow).filter(Workflow.id == workflow_id).first()
     if not wf:
@@ -107,7 +117,14 @@ async def start_workflow_run(
     db.refresh(run)
 
     # Schedule asynchronous execution
-    background_tasks.add_task(execute_in_background, workflow_id, run.id, req.execution_mode)
+    background_tasks.add_task(
+        execute_in_background,
+        workflow_id,
+        run.id,
+        req.execution_mode,
+        req.target_url,
+        req.n8n_webhook_url
+    )
 
     return run_to_status(run)
 

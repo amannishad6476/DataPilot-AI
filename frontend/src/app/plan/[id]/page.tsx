@@ -14,6 +14,9 @@ import {
   Loader2,
   AlertCircle,
   Sparkles,
+  Cpu,
+  Download,
+  ExternalLink,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { WorkflowResponse } from '@/lib/types';
@@ -27,7 +30,8 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
   const [workflow, setWorkflow] = useState<WorkflowResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [executionMode, setExecutionMode] = useState<'demo' | 'real'>('demo');
+  const [executionMode, setExecutionMode] = useState<'demo' | 'real' | 'n8n'>('demo');
+  const [targetUrl, setTargetUrl] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
@@ -35,6 +39,13 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
       try {
         const wf = await api.getWorkflow(workflowId);
         setWorkflow(wf);
+        if (wf.plan.sources && wf.plan.sources.length > 0 && wf.plan.sources[0].target_url) {
+          setTargetUrl(wf.plan.sources[0].target_url);
+        } else if (wf.plan.domain.includes('sponsor') || wf.plan.domain.includes('fest')) {
+          setTargetUrl('https://upciti.gov.in/it-city-lucknow');
+        } else {
+          setTargetUrl('https://httpbin.org/html');
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to load workflow');
       } finally {
@@ -48,11 +59,28 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
     if (isRunning) return;
     setIsRunning(true);
     try {
-      const runStatus = await api.runWorkflow(workflowId, executionMode);
+      const runStatus = await api.runWorkflow(workflowId, executionMode, {
+        target_url: executionMode === 'real' && targetUrl ? targetUrl : undefined,
+      });
       router.push(`/execution/${runStatus.run_id}`);
     } catch (err: any) {
       alert(`Execution failed to start: ${err.message}`);
       setIsRunning(false);
+    }
+  };
+
+  const handleDownloadN8nTemplate = async () => {
+    try {
+      const tpl = await api.getN8nTemplate();
+      const blob = new Blob([JSON.stringify(tpl, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `datapilot_n8n_workflow_${workflowId.slice(0, 8)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(`Failed to download n8n template: ${err.message}`);
     }
   };
 
@@ -110,7 +138,7 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
         </div>
 
         {/* Execution Mode & Run CTA */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs">
             <button
               onClick={() => setExecutionMode('demo')}
@@ -126,11 +154,21 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
               onClick={() => setExecutionMode('real')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
                 executionMode === 'real'
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Live Engine
+              Real Connector
+            </button>
+            <button
+              onClick={() => setExecutionMode('n8n')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                executionMode === 'n8n'
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              n8n Webhook
             </button>
           </div>
 
@@ -153,6 +191,51 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
           </button>
         </div>
       </div>
+
+      {/* Mode Sub-configuration Panel */}
+      {executionMode === 'real' && (
+        <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="space-y-1">
+            <span className="font-semibold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" />
+              Real Permitted Connector: PublicWebPageConnector
+            </span>
+            <p className="text-slate-400">
+              Executes live HTTP fetch, HTML parsing, metadata & contact extraction. Includes resilient fallback protection if unreachable.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <input
+              type="url"
+              placeholder="https://permitted-source-domain.com"
+              value={targetUrl}
+              onChange={(e) => setTargetUrl(e.target.value)}
+              className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-emerald-300 w-full sm:w-72 focus:outline-none focus:border-emerald-400"
+            />
+          </div>
+        </div>
+      )}
+
+      {executionMode === 'n8n' && (
+        <div className="p-4 rounded-xl bg-purple-950/20 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="space-y-1">
+            <span className="font-semibold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Cpu className="w-3.5 h-3.5" />
+              n8n Automation Engine Integration
+            </span>
+            <p className="text-slate-400">
+              Dispatches execution parameters to an external n8n self-hosted or cloud webhook endpoint.
+            </p>
+          </div>
+          <button
+            onClick={handleDownloadN8nTemplate}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 font-mono transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Download n8n Template</span>
+          </button>
+        </div>
+      )}
 
       {/* React Flow Interactive Graph */}
       <div className="space-y-2">
@@ -252,9 +335,11 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
                   className="p-2 rounded-lg bg-slate-950/80 border border-slate-800/80 text-xs flex justify-between items-center"
                 >
                   <span className="text-slate-300 font-medium">{s.name}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-mono">
-                    {s.type}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-mono">
+                      {s.connector_id || 'public_webpage'}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

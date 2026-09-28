@@ -22,6 +22,8 @@ export interface SourceSpec {
   name: string;
   purpose: string;
   allowed_public_only: boolean;
+  connector_id?: string;
+  target_url?: string;
 }
 
 export interface ValidationRuleSpec {
@@ -84,7 +86,7 @@ export interface WorkflowRunStatus {
   run_id: string;
   workflow_id: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
-  execution_mode: 'demo' | 'real';
+  execution_mode: 'demo' | 'real' | 'n8n';
   total_records: number;
   valid_records: number;
   duplicate_records: number;
@@ -130,4 +132,18 @@ export interface DatasetResponse {
   page: number;
   page_size: number;
   total_pages: number;
+}
+
+export interface ConnectorDescriptor {
+  connector_id: string;
+  name: string;
+  description: string;
+  source_type: string;
+  capabilities: string[];
+  allowed_domains: string[];
+  rate_limit_per_minute: number;
+  supports_search: boolean;
+  supports_fetch: boolean;
+  supports_structured_data: boolean;
+  health_status: 'active' | 'degraded' | 'offline';
 }

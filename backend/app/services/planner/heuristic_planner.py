@@ -186,21 +186,24 @@ class DynamicSemanticPlanner(BasePlannerProvider):
                 type="official_portal",
                 name="Public Corporate Registries & Tech Hubs",
                 purpose="Discover legally registered and operating entities compliant with public access terms",
-                allowed_public_only=True
+                allowed_public_only=True,
+                connector_id="public_webpage"
             ),
             SourceSpec(
                 id="src_industry_directories",
                 type="public_directory",
                 name="Verified Industry Directories & Portals",
                 purpose="Locate active organizations, category tags, and verified public web domains",
-                allowed_public_only=True
+                allowed_public_only=True,
+                connector_id="public_webpage"
             ),
             SourceSpec(
                 id="src_entity_portals",
                 type="official_portal",
                 name="Official Public Contact & Press Pages",
                 purpose="Extract published corporate emails, public relations contacts, and office locations",
-                allowed_public_only=True
+                allowed_public_only=True,
+                connector_id="public_webpage"
             )
         ]
         return sources

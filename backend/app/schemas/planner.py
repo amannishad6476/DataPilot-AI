@@ -29,6 +29,8 @@ class SourceSpec(BaseModel):
     name: str = Field(..., description="Readable name of the source")
     purpose: str = Field(..., description="What specific data this source provides")
     allowed_public_only: bool = Field(True, description="Enforces compliance with robots.txt and public data policies")
+    connector_id: Optional[str] = Field("public_webpage", description="Bound connector ID from ConnectorRegistry")
+    target_url: Optional[str] = Field(None, description="Permitted target entry URL if applicable")
 
 
 class ValidationRuleSpec(BaseModel):

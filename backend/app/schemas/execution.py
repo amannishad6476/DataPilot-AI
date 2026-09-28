@@ -4,10 +4,12 @@ from pydantic import BaseModel, Field
 
 
 class RunWorkflowRequest(BaseModel):
-    execution_mode: Literal["demo", "real"] = Field(
+    execution_mode: Literal["demo", "real", "n8n"] = Field(
         "demo",
-        description="Mode of execution: 'demo' uses high-fidelity realistic data with simulated network latencies; 'real' connects to live public permitted search APIs."
+        description="Mode of execution: 'demo' uses high-fidelity realistic data with simulated network latencies; 'real' connects to live public permitted search APIs/pages; 'n8n' dispatches to n8n webhook."
     )
+    target_url: Optional[str] = Field(None, description="Optional override URL for real source collection")
+    n8n_webhook_url: Optional[str] = Field(None, description="Optional external n8n webhook URL to trigger")
 
 
 class StepExecutionStatus(BaseModel):

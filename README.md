@@ -1,7 +1,7 @@
 # DATA PILOT AI
 > **"From Natural Language to Actionable Data."**
 
-An autonomous, AI-powered Data Intelligence Platform that dynamically understands natural-language data collection requests, constructs custom Directed Acyclic Graph (DAG) extraction workflows, visualizes them interactively, executes them with full RFC validation and fuzzy similarity deduplication, and delivers actionable datasets with 100% source evidence traceability.
+An autonomous, AI-powered Data Intelligence Platform that dynamically understands natural-language data collection requests, constructs custom Directed Acyclic Graph (DAG) extraction workflows, visualizes them interactively, executes them across real permitted source connectors and automation engines with full RFC validation and fuzzy similarity deduplication, and delivers actionable datasets with 100% source evidence traceability.
 
 ---
 
@@ -14,22 +14,30 @@ Unlike traditional scrapers that rely on hardcoded keyword-to-script mappings or
    - It synthesizes a unique, multi-stage Directed Acyclic Graph (`steps`, `depends_on`, `action`, `target_fields`) customized to the request.
    - Works with OpenAI, Google Gemini, or the offline-capable **Dynamic Semantic Planner** with zero configuration required.
 
-2. **Similarity-Based Deduplication (Beyond Exact Matching)**:
+2. **Permitted Source Connector Registry (Phase 2)**:
+   - Does not allow LLMs to blindly scrape arbitrary endpoints.
+   - Connects to an explicit **ConnectorRegistry** (`BaseSourceConnector`) enforcing domain whitelists, rate limits, robots.txt compliance, and SSRF prevention.
+   - Built-in connectors:
+     - `PublicWebPageConnector`: Live HTTP fetch, HTML parsing, JSON-LD microdata, and contact extraction.
+     - `JsonFeedConnector`: Public REST API and open-data catalog ingestion.
+     - `N8nWebhookConnector`: Multi-app workflow dispatch and ready-to-use n8n workflow template.
+
+3. **Resilient Fallback & Error Handling**:
+   - If a real external source experiences timeouts, DNS resolution failures, or connection errors, the engine never silently crashes or leaves the user hanging.
+   - Automatically activates a resilient fallback pipeline with transparent audit notices (`Notice: External connector fallback activated`) and provenance markers.
+
+4. **Similarity-Based Deduplication (Beyond Exact Matching)**:
    - Evaluates canonical root web domains (e.g. `tcs.com` vs `www.tcs.com/careers`).
    - Computes Jaro-Winkler string similarity and token Jaccard overlap on entity names (e.g. `Tata Consultancy Services Ltd` vs `Tata Consultancy Services (Lucknow Office)`).
    - Merges complementary attributes so the final record has the richest available contact data.
 
-3. **Multi-Stage RFC Data Validation & Integrity Scoring**:
+5. **Multi-Stage RFC Data Validation & Integrity Scoring**:
    - Validates RFC 5322 email syntax, E.164 phone digit criteria, and accessible HTTP/HTTPS URL formats.
    - Calculates a per-record confidence score (e.g., 98% verified) and flags issues transparently for review.
 
-4. **100% Traceability & Citation Auditing**:
+6. **100% Traceability & Citation Auditing**:
    - Every cell links directly to its verified public source URL.
    - Captures original text snippets and collection timestamps in the interactive **Evidence Drawer**.
-
-5. **Clean Architectural Separation & Automation Ready**:
-   - Complete decoupling between Planning, Engine, Processing, and Storage.
-   - Built to easily connect **n8n execution engines** and real permitted search APIs.
 
 ---
 
@@ -41,13 +49,14 @@ DATA PILOT AI
 ├── 2. Workflow Planning         (LLM Planner: OpenAI / Gemini / Dynamic Semantic Engine)
 ├── 3. Workflow Validation       (Strict Pydantic JSON Schema DAG Verification)
 ├── 4. Workflow Visualization    (Next.js + React Flow @xyflow/react Interactive DAG)
-├── 5. Workflow Execution        (Pluggable BaseWorkflowExecutor: Demo Sandbox + Real Engine)
-├── 6. Data Processing           (DataNormalizer: canonical URLs, cleaned phones, emails)
-├── 7. Integrity Validation      (DataValidator: RFC email, phone format, URL reachability)
-├── 8. Similarity Deduplication  (SimilarityDeduplicator: Jaro-Winkler, Levenshtein, Domain)
-├── 9. Evidence & Traceability   (EvidenceRecord: public source URL, snippet proof, confidence)
-├── 10. Dataset Management       (DatasetService: search, validity filter, dynamic sorting)
-└── 11. Workflow History         (SQLAlchemy Models: archive, inspect, and one-click rerun)
+├── 5. Source Selection          (ConnectorRegistry: Public Web, JSON Feeds, n8n)
+├── 6. Workflow Execution        (Real Permitted Connector + Resilient Fallback + Demo Sandbox)
+├── 7. Data Processing           (DataNormalizer: canonical URLs, cleaned phones, emails)
+├── 8. Integrity Validation      (DataValidator: RFC email, phone format, URL reachability)
+├── 9. Similarity Deduplication  (SimilarityDeduplicator: Jaro-Winkler, Levenshtein, Domain)
+├── 10. Evidence & Traceability  (EvidenceRecord: public source URL, snippet proof, confidence)
+├── 11. Dataset Management       (DatasetService: search, validity filter, dynamic sorting)
+└── 12. Workflow History         (SQLAlchemy Models: archive, inspect, and one-click rerun)
 ```
 
 ---
@@ -65,7 +74,7 @@ DATA PILOT AI
 - **Framework**: FastAPI (Python 3.10+)
 - **Validation**: Pydantic v2 & Pydantic-Settings
 - **ORM / Database**: SQLAlchemy 2.0 with SQLite (Zero-config local) & PostgreSQL-ready schema
-- **HTTP Client**: HTTPX (Asynchronous API querying)
+- **Connectors**: HTTPX (Asynchronous HTTP/REST & Webhook querying)
 - **Testing**: Pytest & Pytest-Asyncio
 
 ---
@@ -131,19 +140,26 @@ DATA PILOT AI
 
 ## 🧪 Running Automated Tests
 
-To run the backend test suite verifying the dynamic planner, similarity deduplication, validation, and full end-to-end API lifecycle:
+To run the complete backend test suite verifying connectors, real execution, fallback resilience, n8n integration, dynamic planning, and similarity deduplication:
 
 ```powershell
 cd backend
 .\venv\Scripts\python.exe -m pytest tests -v
 ```
 
-All 5 test suites pass cleanly:
+All 12 test suites pass cleanly:
 - `test_health_check`
 - `test_e2e_workflow_lifecycle`
-- `test_similarity_deduplication`
-- `test_dynamic_sponsor_planner`
-- `test_dynamic_job_planner`
+- `test_connector_registry`
+- `test_public_webpage_domain_security` (SSRF prevention & domain whitelist)
+- `test_public_webpage_extraction` (Live metadata, email/phone regex, structured schema)
+- `test_n8n_template_generation` (n8n JSON workflow specification)
+- `test_similarity_deduplication` (Fuzzy Jaro-Winkler & root domain matching)
+- `test_dynamic_sponsor_planner` (DAG dependency resolution)
+- `test_dynamic_job_planner` (Dynamic recruitment schema synthesis)
+- `test_connectors_api` (Connector discovery and health checking)
+- `test_n8n_endpoints` (n8n webhook receiver & template endpoints)
+- `test_real_execution_with_resilient_fallback` (Real execution + automatic fallback recovery)
 
 To run the frontend TypeScript build check:
 ```bash
@@ -162,6 +178,10 @@ npm run build
 2. **Inspect Generated DAG**:
    Click **"Generate Workflow"**. The platform decomposes the request into an interactive DAG in React Flow:
    - `Request Ingestion` &rarr; `Dynamic Source Planner` &rarr; `Public Source Discovery` &rarr; `Primary Entity Extraction` &rarr; `Contact Enrichment` &rarr; `Data Normalization` &rarr; `RFC Validation` &rarr; `Similarity Deduplication` &rarr; `Evidence Merge` &rarr; `Dataset Delivery`
+   - Select your execution mode:
+     - **Demo Sandbox**: Safe high-fidelity simulation.
+     - **Real Connector**: Live permitted HTTP extraction via `PublicWebPageConnector` with resilient fallback.
+     - **n8n Webhook**: Automated pipeline dispatch to self-hosted or cloud n8n.
    - Click any node to view its parameters, dependencies, and target fields in the **Step Inspector Drawer**.
 
 3. **Live Execution**:
