@@ -4,6 +4,10 @@ import {
   DatasetResponse,
   EvidenceItem,
   ConnectorDescriptor,
+  TimelineEvent,
+  DataQualitySummary,
+  RunComparisonResponse,
+  SourceHealthReport,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -60,6 +64,10 @@ class ApiClient {
     await fetch(`${API_BASE_URL}/workflows/${workflowId}`, { method: 'DELETE' });
   }
 
+  async listWorkflowRuns(workflowId: string): Promise<WorkflowRunStatus[]> {
+    return this.fetchJson<WorkflowRunStatus[]>(`/workflows/${workflowId}/runs`);
+  }
+
   // Execution
   async runWorkflow(
     workflowId: string,
@@ -76,13 +84,45 @@ class ApiClient {
     });
   }
 
+  async rerunWorkflow(runId: string): Promise<WorkflowRunStatus> {
+    return this.fetchJson<WorkflowRunStatus>(`/runs/${runId}/rerun`, {
+      method: 'POST',
+    });
+  }
+
+  async cancelWorkflow(runId: string): Promise<WorkflowRunStatus> {
+    return this.fetchJson<WorkflowRunStatus>(`/runs/${runId}/cancel`, {
+      method: 'POST',
+    });
+  }
+
+  async listRuns(): Promise<WorkflowRunStatus[]> {
+    return this.fetchJson<WorkflowRunStatus[]>('/runs');
+  }
+
   async getRunStatus(runId: string): Promise<WorkflowRunStatus> {
     return this.fetchJson<WorkflowRunStatus>(`/runs/${runId}`);
   }
 
-  // Connectors & n8n
+  async getRunTimeline(runId: string): Promise<TimelineEvent[]> {
+    return this.fetchJson<TimelineEvent[]>(`/runs/${runId}/timeline`);
+  }
+
+  async getRunQuality(runId: string): Promise<DataQualitySummary> {
+    return this.fetchJson<DataQualitySummary>(`/runs/${runId}/quality`);
+  }
+
+  async compareRuns(runA: string, runB: string): Promise<RunComparisonResponse> {
+    return this.fetchJson<RunComparisonResponse>(`/runs/compare?run_a=${encodeURIComponent(runA)}&run_b=${encodeURIComponent(runB)}`);
+  }
+
+  // Connectors & Source Health
   async listConnectors(): Promise<ConnectorDescriptor[]> {
     return this.fetchJson<ConnectorDescriptor[]>('/connectors');
+  }
+
+  async getSourceHealthReport(): Promise<SourceHealthReport> {
+    return this.fetchJson<SourceHealthReport>('/connectors/health');
   }
 
   async checkConnectorHealth(connectorId: string): Promise<any> {
@@ -99,6 +139,8 @@ class ApiClient {
     params?: {
       search?: string;
       valid_filter?: string;
+      confidence_filter?: string;
+      evidence_filter?: string;
       sort_by?: string;
       sort_order?: string;
       page?: number;
@@ -108,6 +150,8 @@ class ApiClient {
     const query = new URLSearchParams();
     if (params?.search) query.set('search', params.search);
     if (params?.valid_filter) query.set('valid_filter', params.valid_filter);
+    if (params?.confidence_filter) query.set('confidence_filter', params.confidence_filter);
+    if (params?.evidence_filter) query.set('evidence_filter', params.evidence_filter);
     if (params?.sort_by) query.set('sort_by', params.sort_by);
     if (params?.sort_order) query.set('sort_order', params.sort_order);
     if (params?.page) query.set('page', params.page.toString());

@@ -15,6 +15,7 @@ from app.schemas.planner import (
     WorkflowStepPlan,
     ValidationRuleSpec,
 )
+from app.schemas.execution import WorkflowRunStatus
 from app.services.planner.planner_service import planner_service
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ def workflow_to_response(wf: Workflow) -> WorkflowResponse:
         validation_rules=[ValidationRuleSpec(**r) for r in (wf.validation_rules or [])],
         deduplication_strategy=wf.deduplication_strategy or "",
         deduplication_keys=[],
+        reasoning=getattr(wf, 'reasoning', []) or [],
         output_format=wf.output_format or "table"
     )
 
@@ -109,3 +111,18 @@ def delete_workflow(
     db.delete(wf)
     db.commit()
     return None
+
+
+@router.get("/{workflow_id}/runs", response_model=List[WorkflowRunStatus])
+def list_workflow_runs(
+    workflow_id: str,
+    db: Session = Depends(get_db)
+):
+    """Retrieve all historical execution runs for a specific workflow."""
+    wf = db.query(Workflow).filter(Workflow.id == workflow_id).first()
+    if not wf:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
+
+    from app.api.execution import run_to_status
+    runs = db.query(WorkflowRun).filter(WorkflowRun.workflow_id == workflow_id).order_by(desc(WorkflowRun.started_at)).all()
+    return [run_to_status(r) for r in runs]

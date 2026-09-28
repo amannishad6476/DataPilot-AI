@@ -56,7 +56,8 @@ class PlannerService:
             steps_spec=[s.model_dump() for s in plan.steps],
             validation_rules=[r.model_dump() for r in plan.validation_rules],
             deduplication_strategy=plan.deduplication_strategy,
-            output_format=plan.output_format
+            output_format=plan.output_format,
+            reasoning=plan.reasoning
         )
         db.add(workflow)
         db.commit()

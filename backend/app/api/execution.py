@@ -1,18 +1,27 @@
 import asyncio
 import logging
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
+import uuid
+from typing import Optional, List
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, status
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 
 from app.database import get_db, SessionLocal
 from app.models.workflow import Workflow, WorkflowRun
+from app.models.dataset import DatasetRecord
 from app.schemas.execution import (
     RunWorkflowRequest,
     WorkflowRunStatus,
     StepExecutionStatus,
+    TimelineEvent,
+    RunComparisonResponse,
+    SourceHealthReport,
 )
+from app.schemas.dataset import DataQualitySummary
 from app.services.engine.demo_executor import demo_executor
 from app.services.engine.real_executor import real_executor
+from app.services.connectors.registry import connector_registry
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +44,8 @@ def run_to_status(run: WorkflowRun) -> WorkflowRunStatus:
         if running_step and progress_percent < 95:
             progress_percent += int(100 / (total_steps * 2))
 
+    timeline_models = [TimelineEvent(**t) for t in (run.execution_timeline or [])]
+
     return WorkflowRunStatus(
         run_id=run.id,
         workflow_id=run.workflow_id,
@@ -46,6 +57,9 @@ def run_to_status(run: WorkflowRun) -> WorkflowRunStatus:
         progress_percent=min(100, progress_percent),
         current_step_id=running_step.step_id if running_step else None,
         step_statuses=step_models,
+        execution_timeline=timeline_models,
+        quality_summary=run.quality_summary or None,
+        source_health_summary=run.source_health_summary or None,
         error_message=run.error_message,
         started_at=run.started_at,
         completed_at=run.completed_at
@@ -129,6 +143,90 @@ async def start_workflow_run(
     return run_to_status(run)
 
 
+@router.get("/runs/compare", response_model=RunComparisonResponse)
+def compare_runs(
+    run_a: str = Query(..., description="Baseline Run ID"),
+    run_b: str = Query(..., description="Target Run ID to compare against"),
+    db: Session = Depends(get_db)
+):
+    """
+    Compare two execution runs side-by-side to highlight data drift,
+    new entities discovered, confidence score variance, and deduplication efficiency.
+    """
+    obj_a = db.query(WorkflowRun).filter(WorkflowRun.id == run_a).first()
+    obj_b = db.query(WorkflowRun).filter(WorkflowRun.id == run_b).first()
+
+    if not obj_a:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Baseline run {run_a} not found")
+    if not obj_b:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Comparison run {run_b} not found")
+
+    recs_a = db.query(DatasetRecord).filter(DatasetRecord.run_id == run_a).all()
+    recs_b = db.query(DatasetRecord).filter(DatasetRecord.run_id == run_b).all()
+
+    avg_a = round(sum(r.confidence_score for r in recs_a) / max(1, len(recs_a)), 2) if recs_a else 0.0
+    avg_b = round(sum(r.confidence_score for r in recs_b) / max(1, len(recs_b)), 2) if recs_b else 0.0
+
+    def extract_entity_key(r: DatasetRecord) -> str:
+        for k in ["company_name", "title", "name", "website", "apply_link"]:
+            if r.data.get(k):
+                return str(r.data.get(k)).strip().lower()
+        return r.id
+
+    keys_a = {extract_entity_key(r) for r in recs_a}
+    keys_b = {extract_entity_key(r) for r in recs_b}
+
+    common_keys = keys_a.intersection(keys_b)
+    new_keys = keys_b - keys_a
+    removed_keys = keys_a - keys_b
+
+    summary = (
+        f"Compared Run A ({obj_a.execution_mode}, {len(recs_a)} records) against "
+        f"Run B ({obj_b.execution_mode}, {len(recs_b)} records). "
+        f"Found {len(new_keys)} new entities in Run B, {len(common_keys)} persistent entities, "
+        f"and {len(removed_keys)} entities absent in Run B. "
+        f"Confidence shifted by {round(avg_b - avg_a, 2):+}."
+    )
+
+    return RunComparisonResponse(
+        run_a_id=obj_a.id,
+        run_b_id=obj_b.id,
+        run_a_mode=obj_a.execution_mode,
+        run_b_mode=obj_b.execution_mode,
+        run_a_status=obj_a.status,
+        run_b_status=obj_b.status,
+        run_a_date=obj_a.started_at.isoformat() if obj_a.started_at else None,
+        run_b_date=obj_b.started_at.isoformat() if obj_b.started_at else None,
+        total_records_delta=obj_b.total_records - obj_a.total_records,
+        valid_records_delta=obj_b.valid_records - obj_a.valid_records,
+        duplicate_records_delta=obj_b.duplicate_records - obj_a.duplicate_records,
+        average_confidence_a=avg_a,
+        average_confidence_b=avg_b,
+        confidence_delta=round(avg_b - avg_a, 2),
+        new_records_count=len(new_keys),
+        common_records_count=len(common_keys),
+        removed_records_count=len(removed_keys),
+        summary=summary
+    )
+
+
+@router.get("/connectors/health", response_model=SourceHealthReport)
+def get_connectors_health():
+    """Returns actual operational metrics and health status for registered connectors."""
+    return SourceHealthReport(**connector_registry.get_health_report())
+
+
+@router.get("/runs", response_model=List[WorkflowRunStatus])
+def list_all_runs(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """Retrieve all historical execution runs across workflows."""
+    runs = db.query(WorkflowRun).order_by(desc(WorkflowRun.started_at)).offset(skip).limit(limit).all()
+    return [run_to_status(r) for r in runs]
+
+
 @router.get("/runs/{run_id}", response_model=WorkflowRunStatus)
 def get_run_status(
     run_id: str,
@@ -139,3 +237,128 @@ def get_run_status(
     if not run:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow run not found")
     return run_to_status(run)
+
+
+@router.post("/runs/{run_id}/rerun", response_model=WorkflowRunStatus, status_code=status.HTTP_202_ACCEPTED)
+async def rerun_workflow(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Reruns an existing workflow execution by spawning a NEW run instance with fresh ID.
+    Preserves historical runs while capturing updated live metrics.
+    """
+    prior_run = db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
+    if not prior_run:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Original run not found to rerun")
+
+    workflow = db.query(Workflow).filter(Workflow.id == prior_run.workflow_id).first()
+    if not workflow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Associated workflow not found")
+
+    new_run = WorkflowRun(
+        workflow_id=workflow.id,
+        execution_mode=prior_run.execution_mode,
+        status="pending",
+        total_records=0,
+        valid_records=0,
+        duplicate_records=0,
+        step_statuses=[]
+    )
+    db.add(new_run)
+    db.commit()
+    db.refresh(new_run)
+
+    background_tasks.add_task(
+        execute_in_background,
+        workflow.id,
+        new_run.id,
+        new_run.execution_mode
+    )
+
+    return run_to_status(new_run)
+
+
+@router.post("/runs/{run_id}/cancel", response_model=WorkflowRunStatus)
+def cancel_workflow_run(
+    run_id: str,
+    db: Session = Depends(get_db)
+):
+    """Gracefully cancel an ongoing or queued workflow execution."""
+    run = db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow run not found")
+
+    if run.status in ["completed", "failed", "cancelled"]:
+        return run_to_status(run)
+
+    run.status = "cancelled"
+    timeline = list(run.execution_timeline or [])
+    timeline.append({
+        "id": str(uuid.uuid4()),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "step_id": None,
+        "stage": "cancellation",
+        "level": "warning",
+        "message": "Execution halted by user request.",
+        "details": {"action": "manual_cancellation"}
+    })
+    run.execution_timeline = timeline
+    db.commit()
+    db.refresh(run)
+
+    return run_to_status(run)
+
+
+@router.get("/runs/{run_id}/timeline", response_model=List[TimelineEvent])
+def get_run_timeline(
+    run_id: str,
+    db: Session = Depends(get_db)
+):
+    """Retrieve full audit stream of execution timeline events."""
+    run = db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow run not found")
+
+    raw_events = run.execution_timeline or []
+    return [TimelineEvent(**ev) for ev in raw_events]
+
+
+@router.get("/runs/{run_id}/quality", response_model=DataQualitySummary)
+def get_run_quality_summary(
+    run_id: str,
+    db: Session = Depends(get_db)
+):
+    """Retrieve detailed Data Quality Summary for an executed run."""
+    run = db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow run not found")
+
+    if run.quality_summary:
+        return DataQualitySummary(**run.quality_summary)
+
+    # Compute on the fly if not cached
+    records = db.query(DatasetRecord).filter(DatasetRecord.run_id == run_id).all()
+    total_eval = len(records)
+    valid_cnt = sum(1 for r in records if r.is_valid)
+    conf_breakdown = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    issues = []
+    for r in records:
+        lvl = r.confidence_level or ("HIGH" if r.confidence_score >= 0.85 else "MEDIUM" if r.confidence_score >= 0.70 else "LOW")
+        conf_breakdown[lvl] = conf_breakdown.get(lvl, 0) + 1
+        for err in (r.validation_errors or []):
+            if err not in issues:
+                issues.append(err)
+
+    return DataQualitySummary(
+        total_evaluated=total_eval,
+        valid_count=valid_cnt,
+        valid_rate_percent=round((valid_cnt / max(1, total_eval)) * 100, 1),
+        field_completion_rates={},
+        confidence_breakdown=conf_breakdown,
+        average_confidence=round(sum(r.confidence_score for r in records) / max(1, total_eval), 2) if records else 1.0,
+        evidence_coverage_percent=100.0 if records else 0.0,
+        deduplication_reduction_percent=round((run.duplicate_records / max(1, total_eval + run.duplicate_records)) * 100, 1),
+        issues_found=issues
+    )

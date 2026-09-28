@@ -237,6 +237,50 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
+      {/* AI Planning Reasoning Card */}
+      {plan.reasoning && plan.reasoning.length > 0 && (
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900/90 via-cyan-950/20 to-slate-900/90 border border-cyan-500/30 space-y-3 shadow-lg shadow-cyan-950/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-wide">
+                  AI Planning Rationale & Execution Architecture
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Explainable reasoning synthesized dynamically from your prompt requirements
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+              Deterministic Reasoning
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+            {plan.reasoning.map((item, idx) => {
+              const parts = item.split(':');
+              const title = parts.length > 1 ? parts[0] : `Directive ${idx + 1}`;
+              const desc = parts.length > 1 ? parts.slice(1).join(':').trim() : item;
+              return (
+                <div
+                  key={idx}
+                  className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-start gap-2.5 text-xs hover:border-cyan-500/40 transition-colors"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
+                  <div>
+                    <span className="font-semibold text-cyan-300 block mb-0.5">{title}</span>
+                    <span className="text-slate-300 leading-relaxed">{desc}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* React Flow Interactive Graph */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs text-slate-400">

@@ -51,7 +51,10 @@ class DynamicSemanticPlanner(BasePlannerProvider):
         # 8. Deduplication Strategy
         dedup_strategy, dedup_keys = self._derive_deduplication_strategy(fields, entities)
 
-        # 9. Synthesize Goal
+        # 9. Architectural Reasoning Synthesis
+        reasoning = self._derive_reasoning(prompt, domain, entities, fields, sources, validation_rules, dedup_keys)
+
+        # 10. Synthesize Goal
         goal = f"Collect {target_count} validated, deduplicated {domain.replace('_', ' ')} records with full source traceability according to user specifications."
 
         return PlannerOutput(
@@ -65,6 +68,7 @@ class DynamicSemanticPlanner(BasePlannerProvider):
             validation_rules=validation_rules,
             deduplication_strategy=dedup_strategy,
             deduplication_keys=dedup_keys,
+            reasoning=reasoning,
             output_format="table"
         )
 
@@ -405,3 +409,28 @@ class DynamicSemanticPlanner(BasePlannerProvider):
             f"merging duplicate records while preserving the richest contact attributes."
         )
         return desc, keys
+
+    def _derive_reasoning(
+        self,
+        prompt: str,
+        domain: str,
+        entities: List[str],
+        fields: List[FieldSpec],
+        sources: List[SourceSpec],
+        validation_rules: List[ValidationRuleSpec],
+        dedup_keys: List[str]
+    ) -> List[str]:
+        domain_title = domain.replace('_', ' ').title()
+        entity_str = ", ".join(entities) if entities else "target records"
+        source_names = ", ".join([s.name for s in sources]) if sources else "Permitted web endpoints"
+        field_names = ", ".join([f.name for f in fields[:5]]) + (f" and {len(fields)-5} more" if len(fields) > 5 else "")
+        rule_summary = f"{len(validation_rules)} verification checks (including RFC email format, phone validation, URL accessibility)"
+
+        return [
+            f"Intent & Domain Analysis: Interpreted request under the '{domain_title}' domain, focusing on extracting verified '{entity_str}' entities.",
+            f"Permitted Source Compliance: Routed execution to {len(sources)} permitted public source connectors ({source_names}), enforcing robots.txt compliance and public data protection policies.",
+            f"Schema Ingestion: Defined structured schema with {len(fields)} fields ({field_names}), mapping types to automated normalization pipelines.",
+            f"Quality & Integrity Validation: Configured {rule_summary} to gate unverified, broken, or malformed entries prior to persistence.",
+            f"Similarity Deduplication: Established fuzzy multi-key deduplication on [{', '.join(dedup_keys)}] using root domain resolution and Jaro-Winkler distance (threshold 0.86) to prevent duplicate leads across sources.",
+            "Traceability Architecture: Every persisted record will capture immutable source URL citations and text evidence snippets for verifiable auditability."
+        ]

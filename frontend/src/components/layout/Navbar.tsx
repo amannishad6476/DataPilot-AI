@@ -65,7 +65,19 @@ export function Navbar() {
               }`}
             >
               <History className="w-4 h-4 text-indigo-400" />
-              Workflow History
+              Runs & History
+            </Link>
+
+            <Link
+              href="/connectors"
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                pathname.startsWith('/connectors')
+                  ? 'bg-slate-800 text-white'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              <Cpu className="w-4 h-4 text-emerald-400" />
+              Source Health
             </Link>
           </nav>
         </div>

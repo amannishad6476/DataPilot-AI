@@ -111,6 +111,47 @@ export function EvidenceDrawer({ record, onClose }: EvidenceDrawerProps) {
           </div>
         )}
 
+        {/* Field Validation & Normalization Audit Trail */}
+        {record.field_validations && Object.keys(record.field_validations).length > 0 && (
+          <div className="mt-5 p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block">
+              Field Validation & Normalization Audits
+            </span>
+            <div className="space-y-2">
+              {Object.entries(record.field_validations).map(([fKey, fStatus]) => {
+                const transforms = record.field_transformations?.[fKey] || [];
+                return (
+                  <div key={fKey} className="p-2 rounded-lg bg-slate-900/70 border border-slate-800/80 text-xs flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-slate-300 font-semibold">{fKey}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase font-bold ${
+                          fStatus === 'VALID'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : fStatus === 'MISSING'
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                        }`}
+                      >
+                        {fStatus}
+                      </span>
+                    </div>
+                    {transforms.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {transforms.map((t, tidx) => (
+                          <span key={tidx} className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-cyan-300">
+                            {t.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Traceability Citations */}
         <div className="mt-6">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">

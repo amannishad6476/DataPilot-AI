@@ -63,6 +63,7 @@ class PlannerOutput(BaseModel):
     validation_rules: List[ValidationRuleSpec] = Field(default_factory=list, description="Validation rules to enforce")
     deduplication_strategy: str = Field(..., description="Strategy description for deduplication")
     deduplication_keys: List[str] = Field(default_factory=list, description="Key fields used for similarity comparison")
+    reasoning: List[str] = Field(default_factory=list, description="Architectural reasoning explaining why sources, steps, rules, and deduplication were chosen")
     output_format: str = Field("table", description="Final output format: table, json, csv")
 
 

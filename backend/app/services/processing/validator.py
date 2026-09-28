@@ -31,22 +31,34 @@ class DataValidator:
         except Exception:
             return False
 
-    def validate_record(
+    def validate_record_detailed(
         self,
         record: Dict[str, Any],
         rules: List[ValidationRuleSpec]
-    ) -> Tuple[bool, List[str], float]:
+    ) -> Tuple[bool, List[str], float, Dict[str, str], str]:
         """
         Validates a single record against the specified rules.
         Returns:
-            - is_valid: True if no 'error' severity violations occurred
+            - is_strictly_valid: True if no 'error' severity violations occurred
             - errors: List of validation issue descriptions
-            - confidence_score: Float between 0.0 and 1.0 based on quality checks
+            - confidence_score: Float between 0.50 and 0.99
+            - field_validations: Dict[str, str] ("VALID", "INVALID", "MISSING", "NEEDS_REVIEW")
+            - confidence_level: "HIGH" | "MEDIUM" | "LOW"
         """
         errors: List[str] = []
         is_strictly_valid = True
         total_checks = 0
         passed_checks = 0
+
+        # Initialize field statuses based on presence
+        field_validations: Dict[str, str] = {}
+        for k, v in record.items():
+            if k.startswith("_"):
+                continue
+            if v is None or str(v).strip() == "":
+                field_validations[k] = "MISSING"
+            else:
+                field_validations[k] = "VALID"
 
         for rule in rules:
             field_val = record.get(rule.field)
@@ -57,49 +69,62 @@ class DataValidator:
                 if not val_str:
                     msg = f"Field '{rule.field}' is required and cannot be empty"
                     errors.append(msg)
+                    field_validations[rule.field] = "MISSING" if rule.severity != "error" else "INVALID"
                     if rule.severity == "error":
                         is_strictly_valid = False
                 else:
                     passed_checks += 1
+                    if field_validations.get(rule.field) != "INVALID":
+                        field_validations[rule.field] = "VALID"
 
             elif rule.rule_type == "email_rfc":
                 if val_str:
                     if not self.validate_email(val_str):
                         msg = f"Field '{rule.field}' value '{val_str}' fails standard email format validation"
                         errors.append(msg)
+                        field_validations[rule.field] = "INVALID" if rule.severity == "error" else "NEEDS_REVIEW"
                         if rule.severity == "error":
                             is_strictly_valid = False
                     else:
                         passed_checks += 1
+                        field_validations[rule.field] = "VALID"
                 else:
-                    # Optional field left blank
                     passed_checks += 0.5
+                    field_validations[rule.field] = "MISSING"
 
             elif rule.rule_type in ["phone_format", "phone_e164"]:
                 if val_str:
                     if not self.validate_phone(val_str):
                         msg = f"Field '{rule.field}' value '{val_str}' fails phone format validation (insufficient digits)"
                         errors.append(msg)
+                        field_validations[rule.field] = "INVALID" if rule.severity == "error" else "NEEDS_REVIEW"
                         if rule.severity == "error":
                             is_strictly_valid = False
                     else:
                         passed_checks += 1
+                        field_validations[rule.field] = "VALID"
                 else:
                     passed_checks += 0.5
+                    field_validations[rule.field] = "MISSING"
 
             elif rule.rule_type == "url_format":
                 if val_str:
                     if not self.validate_url(val_str):
                         msg = f"Field '{rule.field}' value '{val_str}' is not a valid accessible URL format"
                         errors.append(msg)
+                        field_validations[rule.field] = "INVALID" if rule.severity == "error" else "NEEDS_REVIEW"
                         if rule.severity == "error":
                             is_strictly_valid = False
                     else:
                         passed_checks += 1
+                        field_validations[rule.field] = "VALID"
                 else:
                     if rule.severity == "error":
                         is_strictly_valid = False
+                        field_validations[rule.field] = "INVALID"
                         errors.append(f"Mandatory URL '{rule.field}' is missing")
+                    else:
+                        field_validations[rule.field] = "MISSING"
 
             elif rule.rule_type == "regex":
                 pattern = rule.params.get("pattern", "")
@@ -107,17 +132,34 @@ class DataValidator:
                     if not re.search(pattern, val_str):
                         msg = f"Field '{rule.field}' did not match required pattern {pattern}"
                         errors.append(msg)
+                        field_validations[rule.field] = "INVALID" if rule.severity == "error" else "NEEDS_REVIEW"
                         if rule.severity == "error":
                             is_strictly_valid = False
                     else:
                         passed_checks += 1
+                        field_validations[rule.field] = "VALID"
                 else:
                     passed_checks += 1
 
         confidence = round(passed_checks / max(total_checks, 1), 2)
-        # Cap confidence between 0.50 and 0.99
         confidence = max(0.50, min(0.99, confidence))
         if not is_strictly_valid:
             confidence = min(confidence, 0.65)
 
-        return is_strictly_valid, errors, confidence
+        if confidence >= 0.85 and is_strictly_valid:
+            confidence_level = "HIGH"
+        elif confidence >= 0.70 and is_strictly_valid:
+            confidence_level = "MEDIUM"
+        else:
+            confidence_level = "LOW"
+
+        return is_strictly_valid, errors, confidence, field_validations, confidence_level
+
+    def validate_record(
+        self,
+        record: Dict[str, Any],
+        rules: List[ValidationRuleSpec]
+    ) -> Tuple[bool, List[str], float]:
+        """Backward-compatible validation returning (is_valid, errors, confidence)."""
+        valid, errors, conf, _, _ = self.validate_record_detailed(record, rules)
+        return valid, errors, conf

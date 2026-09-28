@@ -17,6 +17,8 @@ def get_run_dataset(
     run_id: str,
     search: Optional[str] = Query(None, description="Search term across all columns"),
     valid_filter: Optional[str] = Query("all", pattern="^(all|valid|invalid)$", description="Filter records by validity"),
+    confidence_filter: Optional[str] = Query(None, description="Filter by confidence level: all, HIGH, MEDIUM, LOW"),
+    evidence_filter: Optional[str] = Query(None, description="Filter by evidence presence: all, AVAILABLE, MISSING"),
     sort_by: Optional[str] = Query(None, description="Field name or metric to sort by"),
     sort_order: str = Query("asc", pattern="^(asc|desc)$", description="Sorting direction"),
     page: int = Query(1, ge=1, description="Page number"),
@@ -25,7 +27,7 @@ def get_run_dataset(
 ):
     """
     Retrieve structured records produced by a run, with search, validity filtering,
-    dynamic sorting, and full evidence linkages.
+    dynamic sorting, confidence filtering, and full evidence linkages.
     """
     try:
         return dataset_service.get_dataset(
@@ -33,6 +35,8 @@ def get_run_dataset(
             run_id=run_id,
             search=search,
             valid_filter=valid_filter,
+            confidence_filter=confidence_filter,
+            evidence_filter=evidence_filter,
             sort_by=sort_by,
             sort_order=sort_order,
             page=page,

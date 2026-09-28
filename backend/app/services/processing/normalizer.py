@@ -1,6 +1,6 @@
 import re
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
-from typing import Dict, Any
+from typing import Dict, Any, Tuple, List
 
 
 class DataNormalizer:
@@ -89,20 +89,81 @@ class DataNormalizer:
             return f"+{digits[:2]} {digits[2:7]} {digits[7:]}"
         return digits
 
-    def normalize_record(self, record_data: Dict[str, Any]) -> Dict[str, Any]:
+    def normalize_record_with_audit(self, record_data: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, List[str]]]:
+        """
+        Normalizes a record and returns:
+            - normalized record dict
+            - field_transformations: Dict[field_name, List[transformation_tags]]
+        """
         normalized = {}
+        transformations: Dict[str, List[str]] = {}
+
         for key, val in record_data.items():
-            if val is None:
-                normalized[key] = ""
+            if key.startswith("_"):
+                normalized[key] = val
                 continue
 
+            if val is None:
+                normalized[key] = ""
+                transformations[key] = ["coerced_empty_string"]
+                continue
+
+            raw_str = str(val)
             k_lower = key.lower()
+            field_transforms: List[str] = []
+
             if "url" in k_lower or "website" in k_lower or "link" in k_lower:
-                normalized[key] = self.normalize_url(str(val))
+                clean_url = self.normalize_url(raw_str)
+                normalized[key] = clean_url
+                if raw_str != clean_url:
+                    if not raw_str.startswith("http"):
+                        field_transforms.append("added_https_scheme")
+                    if "utm_" in raw_str:
+                        field_transforms.append("stripped_tracking_parameters")
+                    if "www." in raw_str and "www." not in clean_url:
+                        field_transforms.append("canonicalized_hostname")
+                    if not field_transforms:
+                        field_transforms.append("standardized_url")
+                else:
+                    field_transforms.append("valid_syntax_preserved")
+
             elif "email" in k_lower:
-                normalized[key] = self.normalize_email(str(val))
+                clean_email = self.normalize_email(raw_str)
+                normalized[key] = clean_email
+                if raw_str != clean_email:
+                    if raw_str.lower().startswith("mailto:"):
+                        field_transforms.append("stripped_mailto_prefix")
+                    if raw_str != raw_str.lower():
+                        field_transforms.append("lowercased")
+                    if raw_str.strip() != raw_str:
+                        field_transforms.append("trimmed_whitespace")
+                    if not field_transforms:
+                        field_transforms.append("sanitized_email")
+                else:
+                    field_transforms.append("rfc_compliant")
+
             elif "phone" in k_lower or "mobile" in k_lower or "tel" in k_lower:
-                normalized[key] = self.normalize_phone(str(val))
+                clean_phone = self.normalize_phone(raw_str)
+                normalized[key] = clean_phone
+                if raw_str != clean_phone:
+                    field_transforms.append("stripped_punctuation")
+                    if clean_phone.startswith("+"):
+                        field_transforms.append("e164_standardized")
+                else:
+                    field_transforms.append("valid_phone_format")
+
             else:
-                normalized[key] = self.clean_text(val)
+                clean_s = self.clean_text(val)
+                normalized[key] = clean_s
+                if raw_str != clean_s:
+                    field_transforms.append("collapsed_whitespace")
+                else:
+                    field_transforms.append("exact_match")
+
+            transformations[key] = field_transforms
+
+        return normalized, transformations
+
+    def normalize_record(self, record_data: Dict[str, Any]) -> Dict[str, Any]:
+        normalized, _ = self.normalize_record_with_audit(record_data)
         return normalized

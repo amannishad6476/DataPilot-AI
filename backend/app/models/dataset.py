@@ -18,6 +18,10 @@ class DatasetRecord(Base):
     data = Column(JSON, default=dict)
     is_valid = Column(Boolean, default=True)
     confidence_score = Column(Float, default=1.0)
+    confidence_level = Column(String(20), default="HIGH")  # HIGH, MEDIUM, LOW
+    evidence_status = Column(String(20), default="AVAILABLE")  # AVAILABLE, PARTIAL, MISSING
+    field_validations = Column(JSON, default=dict)  # field_name -> "VALID" | "INVALID" | "MISSING" | "NEEDS_REVIEW"
+    field_transformations = Column(JSON, default=dict)  # field_name -> [list of applied transforms]
     validation_errors = Column(JSON, default=list)
     deduplicated_with = Column(String(36), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

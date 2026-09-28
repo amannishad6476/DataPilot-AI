@@ -8,7 +8,7 @@ from sqlalchemy import desc, asc
 from app.models.workflow import Workflow, WorkflowRun
 from app.models.dataset import DatasetRecord, EvidenceRecord
 from app.schemas.planner import FieldSpec
-from app.schemas.dataset import DatasetResponse, RecordItem, EvidenceItem
+from app.schemas.dataset import DatasetResponse, RecordItem, EvidenceItem, DataQualitySummary
 
 
 class DatasetService:
@@ -18,6 +18,8 @@ class DatasetService:
         run_id: str,
         search: Optional[str] = None,
         valid_filter: Optional[str] = None,  # "all", "valid", "invalid"
+        confidence_filter: Optional[str] = None,  # "all", "HIGH", "MEDIUM", "LOW"
+        evidence_filter: Optional[str] = None,  # "all", "AVAILABLE", "MISSING"
         sort_by: Optional[str] = None,
         sort_order: str = "asc",
         page: int = 1,
@@ -38,6 +40,12 @@ class DatasetService:
             query = query.filter(DatasetRecord.is_valid == True)
         elif valid_filter == "invalid":
             query = query.filter(DatasetRecord.is_valid == False)
+
+        if confidence_filter and confidence_filter.lower() != "all":
+            query = query.filter(DatasetRecord.confidence_level == confidence_filter.upper())
+
+        if evidence_filter and evidence_filter.lower() != "all":
+            query = query.filter(DatasetRecord.evidence_status == evidence_filter.upper())
 
         records_all = query.all()
 
@@ -86,11 +94,19 @@ class DatasetService:
                 )
                 for e in r.evidence_items
             ]
+            c_score = r.confidence_score or 1.0
+            c_level = r.confidence_level or ("HIGH" if c_score >= 0.85 else "MEDIUM" if c_score >= 0.70 else "LOW")
+            ev_status = r.evidence_status or ("AVAILABLE" if r.evidence_items else "MISSING")
+
             record_items.append(RecordItem(
                 id=r.id,
-                data=r.data,
+                data=r.data or {},
                 is_valid=r.is_valid,
-                confidence_score=r.confidence_score,
+                confidence_score=c_score,
+                confidence_level=c_level,
+                evidence_status=ev_status,
+                field_validations=r.field_validations or {},
+                field_transformations=r.field_transformations or {},
                 validation_errors=r.validation_errors or [],
                 deduplicated_with=r.deduplicated_with,
                 evidence_items=evidence_models,
@@ -98,6 +114,46 @@ class DatasetService:
             ))
 
         field_specs = [FieldSpec(**f) for f in (workflow.fields_spec or [])]
+
+        # Determine quality summary: from stored run or dynamically computed
+        qs_model = None
+        if run.quality_summary:
+            try:
+                qs_model = DataQualitySummary(**run.quality_summary)
+            except Exception:
+                pass
+
+        if not qs_model and records_all:
+            # Dynamically compute quality summary for legacy or un-summarized runs
+            total_eval = len(records_all)
+            valid_cnt = sum(1 for r in records_all if r.is_valid)
+            field_comp = {}
+            for f in (workflow.fields_spec or []):
+                fname = f.get("name") if isinstance(f, dict) else getattr(f, "name", "")
+                if fname:
+                    present = sum(1 for r in records_all if r.data.get(fname) and str(r.data.get(fname)).strip())
+                    field_comp[fname] = round((present / max(1, total_eval)) * 100, 1)
+
+            conf_breakdown = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
+            issues = []
+            for r in records_all:
+                lvl = r.confidence_level or ("HIGH" if r.confidence_score >= 0.85 else "MEDIUM" if r.confidence_score >= 0.70 else "LOW")
+                conf_breakdown[lvl] = conf_breakdown.get(lvl, 0) + 1
+                for err in (r.validation_errors or []):
+                    if err not in issues:
+                        issues.append(err)
+
+            qs_model = DataQualitySummary(
+                total_evaluated=total_eval,
+                valid_count=valid_cnt,
+                valid_rate_percent=round((valid_cnt / max(1, total_eval)) * 100, 1),
+                field_completion_rates=field_comp,
+                confidence_breakdown=conf_breakdown,
+                average_confidence=round(sum(r.confidence_score for r in records_all) / max(1, total_eval), 2),
+                evidence_coverage_percent=100.0 if any(r.evidence_items for r in records_all) else 0.0,
+                deduplication_reduction_percent=round((run.duplicate_records / max(1, total_eval + run.duplicate_records)) * 100, 1),
+                issues_found=issues
+            )
 
         return DatasetResponse(
             run_id=run.id,
@@ -110,6 +166,7 @@ class DatasetService:
             duplicate_records=run.duplicate_records,
             fields=field_specs,
             records=record_items,
+            quality_summary=qs_model,
             page=page,
             page_size=page_size,
             total_pages=total_pages

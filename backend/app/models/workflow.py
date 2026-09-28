@@ -23,6 +23,7 @@ class Workflow(Base):
     validation_rules = Column(JSON, default=list)
     deduplication_strategy = Column(Text, default="fuzzy_entity_matching")
     output_format = Column(String(50), default="table")
+    reasoning = Column(JSON, default=list)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -40,6 +41,9 @@ class WorkflowRun(Base):
     valid_records = Column(Integer, default=0)
     duplicate_records = Column(Integer, default=0)
     step_statuses = Column(JSON, default=list)
+    quality_summary = Column(JSON, default=dict)
+    execution_timeline = Column(JSON, default=list)
+    source_health_summary = Column(JSON, default=dict)
     error_message = Column(Text, nullable=True)
     started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     completed_at = Column(DateTime, nullable=True)

@@ -13,6 +13,7 @@ import {
   Loader2,
   Table2,
   FileSpreadsheet,
+  ShieldCheck,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DatasetResponse } from '@/lib/types';
@@ -169,6 +170,97 @@ export default function DatasetPage({ params }: { params: Promise<{ id: string }
           </div>
         </div>
       </div>
+
+      {/* Data Quality & Confidence Analytics Card */}
+      {dataset.quality_summary && (
+        <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+              <h2 className="text-sm font-bold text-white tracking-wide">
+                Data Quality & Mathematical Confidence Analytics
+              </h2>
+            </div>
+            <div className="flex items-center gap-3 text-xs font-mono">
+              <span className="text-emerald-400">High: {dataset.quality_summary.confidence_breakdown?.HIGH || 0}</span>
+              <span className="text-amber-400">Med: {dataset.quality_summary.confidence_breakdown?.MEDIUM || 0}</span>
+              <span className="text-rose-400">Low: {dataset.quality_summary.confidence_breakdown?.LOW || 0}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div className="space-y-1">
+              <span className="text-slate-400 font-medium">Valid Pass Rate</span>
+              <p className="text-xl font-bold font-mono text-emerald-400">
+                {dataset.quality_summary.valid_rate_percent}%
+              </p>
+              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-emerald-500 h-full rounded-full"
+                  style={{ width: `${dataset.quality_summary.valid_rate_percent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-slate-400 font-medium">Evidence Coverage</span>
+              <p className="text-xl font-bold font-mono text-cyan-300">
+                {dataset.quality_summary.evidence_coverage_percent}%
+              </p>
+              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-cyan-500 h-full rounded-full"
+                  style={{ width: `${dataset.quality_summary.evidence_coverage_percent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-slate-400 font-medium">Deduplication Yield</span>
+              <p className="text-xl font-bold font-mono text-rose-400">
+                {dataset.quality_summary.deduplication_reduction_percent}%
+              </p>
+              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-rose-500 h-full rounded-full"
+                  style={{ width: `${dataset.quality_summary.deduplication_reduction_percent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-slate-400 font-medium">Avg Mathematical Confidence</span>
+              <p className="text-xl font-bold font-mono text-indigo-300">
+                {dataset.quality_summary.average_confidence}
+              </p>
+              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-indigo-500 h-full rounded-full"
+                  style={{ width: `${Math.round(dataset.quality_summary.average_confidence * 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {dataset.quality_summary.issues_found && dataset.quality_summary.issues_found.length > 0 && (
+            <div className="pt-2 border-t border-slate-800/80">
+              <span className="text-[11px] font-semibold text-rose-400 uppercase tracking-wider block mb-1.5">
+                Issues Identified & Cleaned ({dataset.quality_summary.issues_found.length})
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {dataset.quality_summary.issues_found.map((issue, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-0.5 rounded-md bg-rose-950/40 text-rose-300 border border-rose-500/20 text-[10px] font-mono"
+                  >
+                    {issue}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Interactive Table & Evidence Drawer */}
       <DatasetTable fields={dataset.fields} records={dataset.records} />
