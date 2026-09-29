@@ -26,6 +26,7 @@ jobs:
       - name: Run backend tests
         env:
           SQLALCHEMY_CYTHON: "0"
+          PYTHONPATH: "backend"
         run: |
           pytest backend/tests
 
