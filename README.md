@@ -5,7 +5,7 @@ An autonomous, enterprise-grade AI Data Intelligence Platform that translates na
 
 ---
 
-## 🌟 Hackathon Key Differentiators
+## 🌟 DataPilot-AI Key Differentiators
 
 Unlike traditional scrapers that rely on hardcoded keyword-to-script mappings or static mock workflows, **DATA PILOT AI** provides:
 
