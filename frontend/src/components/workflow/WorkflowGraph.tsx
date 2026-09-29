@@ -1,20 +1,18 @@
 'use client';
 
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
-  useNodesState,
-  useEdgesState,
   Node,
   NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { WorkflowStepPlan, StepExecutionStatus } from '@/lib/types';
-import { computeWorkflowGraph, WorkflowNodeData } from '@/lib/graph-layout';
+import { computeWorkflowGraph } from '@/lib/graph-layout';
 import { CustomStepNode } from './CustomStepNode';
 import { StepInspectorDrawer } from './StepInspectorDrawer';
 
@@ -28,22 +26,15 @@ const nodeTypes: NodeTypes = {
   customStep: CustomStepNode as any,
 };
 
-export function WorkflowGraph({ steps, stepStatuses = [], height = '560px' }: WorkflowGraphProps) {
+const EMPTY_STATUSES: StepExecutionStatus[] = [];
+
+export function WorkflowGraph({ steps, stepStatuses = EMPTY_STATUSES, height = '560px' }: WorkflowGraphProps) {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
 
   // Compute graph geometry
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
-    return computeWorkflowGraph(steps, stepStatuses, selectedStepId);
+  const { nodes, edges } = useMemo(() => {
+    return computeWorkflowGraph(steps, stepStatuses || EMPTY_STATUSES, selectedStepId);
   }, [steps, stepStatuses, selectedStepId]);
-
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<WorkflowNodeData>>(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-
-  // Synchronize when statuses or layout changes
-  useEffect(() => {
-    setNodes(initialNodes);
-    setEdges(initialEdges);
-  }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   const onNodeClick = useCallback((_: any, node: Node) => {
     setSelectedStepId(node.id);
@@ -56,7 +47,7 @@ export function WorkflowGraph({ steps, stepStatuses = [], height = '560px' }: Wo
 
   const selectedStatus = useMemo(() => {
     if (!selectedStepId) return null;
-    return stepStatuses.find((s) => s.step_id === selectedStepId) || null;
+    return (stepStatuses || EMPTY_STATUSES).find((s) => s.step_id === selectedStepId) || null;
   }, [selectedStepId, stepStatuses]);
 
   return (
@@ -74,8 +65,6 @@ export function WorkflowGraph({ steps, stepStatuses = [], height = '560px' }: Wo
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         fitView
