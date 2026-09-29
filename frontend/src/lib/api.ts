@@ -39,6 +39,13 @@ class ApiClient {
 
       return await response.json();
     } catch (err: any) {
+      if (err.name === 'TypeError' && (err.message === 'Failed to fetch' || err.message.includes('fetch'))) {
+        const netErr = new Error(
+          `Cannot connect to DataPilot backend at ${API_BASE_URL}. Please ensure the FastAPI server is running on port 8000 (run "python run.py" in backend/).`
+        );
+        console.error(`API Request Failed: ${endpoint}`, netErr);
+        throw netErr;
+      }
       console.error(`API Request Failed: ${endpoint}`, err);
       throw err;
     }
