@@ -43,6 +43,10 @@ class JsonFeedConnector(BaseSourceConnector):
         if not target_url:
             raise ValueError("Target URL must be provided for JsonFeedConnector.")
 
+        from app.services.connectors.registry import connector_registry
+        cb = connector_registry.get_circuit_breaker(self.connector_id)
+        cb.ensure_executable()
+
         if not self.is_domain_permitted(target_url):
             raise PermissionError(f"Target domain for URL '{target_url}' is not on the permitted list.")
 

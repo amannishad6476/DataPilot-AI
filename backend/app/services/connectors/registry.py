@@ -22,9 +22,12 @@ class ConnectorRegistry:
     def __init__(self):
         self._connectors: Dict[str, BaseSourceConnector] = {}
         self._metrics: Dict[str, Dict[str, Any]] = {}
+        self._circuit_breakers: Dict[str, Any] = {}
 
     def register(self, connector: BaseSourceConnector) -> None:
+        from app.services.connectors.circuit_breaker import CircuitBreaker
         self._connectors[connector.connector_id] = connector
+        self._circuit_breakers[connector.connector_id] = CircuitBreaker(connector.connector_id)
         if connector.connector_id not in self._metrics:
             self._metrics[connector.connector_id] = {
                 "total_requests": 0,
@@ -36,6 +39,12 @@ class ConnectorRegistry:
                 "last_error": None
             }
         logger.info(f"Registered connector: {connector.connector_id} ({connector.name})")
+
+    def get_circuit_breaker(self, connector_id: str):
+        from app.services.connectors.circuit_breaker import CircuitBreaker
+        if connector_id not in self._circuit_breakers:
+            self._circuit_breakers[connector_id] = CircuitBreaker(connector_id)
+        return self._circuit_breakers[connector_id]
 
     def record_call(
         self,
@@ -57,15 +66,27 @@ class ConnectorRegistry:
             }
         m = self._metrics[connector_id]
         m["total_requests"] += 1
+        now_iso = datetime.now(timezone.utc).isoformat()
+        conn = self._connectors.get(connector_id)
+
+        cb = self.get_circuit_breaker(connector_id)
         if success:
             m["success_count"] += 1
+            if conn:
+                conn.last_success = now_iso
+            cb.record_success()
         else:
             m["error_count"] += 1
+            if conn:
+                conn.last_failure = now_iso
+            cb.record_failure()
+
         m["latencies"].append(latency_ms)
         m["latencies"] = m["latencies"][-20:]
-        m["last_attempt_at"] = datetime.now(timezone.utc).isoformat()
+        m["last_attempt_at"] = now_iso
         m["last_status_code"] = status_code
         m["last_error"] = error
+
 
     def get_health_report(self) -> Dict[str, Any]:
         items = []

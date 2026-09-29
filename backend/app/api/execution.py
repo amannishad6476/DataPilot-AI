@@ -22,10 +22,13 @@ from app.schemas.dataset import DataQualitySummary
 from app.services.engine.demo_executor import demo_executor
 from app.services.engine.real_executor import real_executor
 from app.services.connectors.registry import connector_registry
+from app.core.security import get_current_user, require_role, Role, UserContext
+from app.core.audit import record_audit_event
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Execution"])
+
 
 
 def run_to_status(run: WorkflowRun) -> WorkflowRunStatus:
@@ -107,7 +110,8 @@ async def start_workflow_run(
     workflow_id: str,
     req: RunWorkflowRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_current_user)
 ):
     """
     Initiates execution of a planned workflow in background.
@@ -116,9 +120,13 @@ async def start_workflow_run(
     wf = db.query(Workflow).filter(Workflow.id == workflow_id).first()
     if not wf:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
+    if user.tenant_id != "*" and wf.tenant_id != user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to workflow outside tenant")
 
     run = WorkflowRun(
         workflow_id=workflow_id,
+        tenant_id=user.tenant_id,
+        user_id=user.user_id,
         execution_mode=req.execution_mode,
         status="pending",
         total_records=0,
@@ -129,6 +137,17 @@ async def start_workflow_run(
     db.add(run)
     db.commit()
     db.refresh(run)
+
+    record_audit_event(
+        db,
+        event_type="RUN_STARTED",
+        resource_type="workflow_run",
+        resource_id=run.id,
+        action="start_run",
+        tenant_id=user.tenant_id,
+        user_id=user.user_id,
+        details={"mode": req.execution_mode, "workflow_id": workflow_id}
+    )
 
     # Schedule asynchronous execution
     background_tasks.add_task(
@@ -220,22 +239,29 @@ def get_connectors_health():
 def list_all_runs(
     skip: int = 0,
     limit: int = 50,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_current_user)
 ):
-    """Retrieve all historical execution runs across workflows."""
-    runs = db.query(WorkflowRun).order_by(desc(WorkflowRun.started_at)).offset(skip).limit(limit).all()
+    """Retrieve all historical execution runs across workflows within the user tenant."""
+    query = db.query(WorkflowRun)
+    if user.tenant_id != "*":
+        query = query.filter(WorkflowRun.tenant_id == user.tenant_id)
+    runs = query.order_by(desc(WorkflowRun.started_at)).offset(skip).limit(limit).all()
     return [run_to_status(r) for r in runs]
 
 
 @router.get("/runs/{run_id}", response_model=WorkflowRunStatus)
 def get_run_status(
     run_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_current_user)
 ):
     """Query live execution status, step progression, and metric counters."""
     run = db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
     if not run:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow run not found")
+    if user.tenant_id != "*" and run.tenant_id != user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to run outside tenant")
     return run_to_status(run)
 
 
@@ -243,7 +269,8 @@ def get_run_status(
 async def rerun_workflow(
     run_id: str,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_current_user)
 ):
     """
     Reruns an existing workflow execution by spawning a NEW run instance with fresh ID.
@@ -252,6 +279,8 @@ async def rerun_workflow(
     prior_run = db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
     if not prior_run:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Original run not found to rerun")
+    if user.tenant_id != "*" and prior_run.tenant_id != user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to run outside tenant")
 
     workflow = db.query(Workflow).filter(Workflow.id == prior_run.workflow_id).first()
     if not workflow:
@@ -259,6 +288,8 @@ async def rerun_workflow(
 
     new_run = WorkflowRun(
         workflow_id=workflow.id,
+        tenant_id=user.tenant_id,
+        user_id=user.user_id,
         execution_mode=prior_run.execution_mode,
         status="pending",
         total_records=0,
@@ -269,6 +300,17 @@ async def rerun_workflow(
     db.add(new_run)
     db.commit()
     db.refresh(new_run)
+
+    record_audit_event(
+        db,
+        event_type="RUN_RERUN",
+        resource_type="workflow_run",
+        resource_id=new_run.id,
+        action="rerun",
+        tenant_id=user.tenant_id,
+        user_id=user.user_id,
+        details={"prior_run_id": run_id, "workflow_id": workflow.id}
+    )
 
     background_tasks.add_task(
         execute_in_background,
@@ -283,12 +325,15 @@ async def rerun_workflow(
 @router.post("/runs/{run_id}/cancel", response_model=WorkflowRunStatus)
 def cancel_workflow_run(
     run_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_current_user)
 ):
     """Gracefully cancel an ongoing or queued workflow execution."""
     run = db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
     if not run:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow run not found")
+    if user.tenant_id != "*" and run.tenant_id != user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to run outside tenant")
 
     if run.status in ["completed", "failed", "cancelled"]:
         return run_to_status(run)
@@ -308,7 +353,18 @@ def cancel_workflow_run(
     db.commit()
     db.refresh(run)
 
+    record_audit_event(
+        db,
+        event_type="RUN_CANCELLED",
+        resource_type="workflow_run",
+        resource_id=run.id,
+        action="cancel",
+        tenant_id=user.tenant_id,
+        user_id=user.user_id
+    )
+
     return run_to_status(run)
+
 
 
 @router.get("/runs/{run_id}/timeline", response_model=List[TimelineEvent])

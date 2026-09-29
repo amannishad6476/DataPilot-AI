@@ -91,12 +91,13 @@ class SimilarityDeduplicator:
         r1: Dict[str, Any],
         r2: Dict[str, Any],
         key_fields: List[str]
-    ) -> Tuple[bool, str]:
+    ) -> Tuple[bool, str, str, float]:
         """
-        Determines if two records represent the same real-world entity.
-        Returns (is_duplicate, reason).
+        Determines if two records represent the same real-world entity using
+        deterministic matching first, followed by similarity matching.
+        Returns: (is_duplicate, reason, match_method, similarity_score)
         """
-        # 1. Compare web domains
+        # 1. Deterministic Web Root Domain match
         for web_key in ["website", "url", "apply_link"]:
             u1 = r1.get(web_key, "")
             u2 = r2.get(web_key, "")
@@ -104,76 +105,115 @@ class SimilarityDeduplicator:
                 d1 = DataNormalizer.extract_root_domain(u1)
                 d2 = DataNormalizer.extract_root_domain(u2)
                 if d1 and d2 and d1 not in self.GENERIC_DOMAINS and d1 == d2:
-                    return True, f"Identical canonical root domain: {d1}"
+                    return True, f"Identical canonical root domain: {d1}", "deterministic_domain", 1.0
 
-        # 2. Compare phone numbers
+        # 2. Deterministic Phone Number match
         for phone_key in ["phone", "mobile", "contact_number"]:
             p1 = re.sub(r'[^\d]', '', str(r1.get(phone_key, "")))
             p2 = re.sub(r'[^\d]', '', str(r2.get(phone_key, "")))
             if len(p1) >= 10 and p1 == p2:
-                return True, f"Identical contact phone number: {p1}"
+                return True, f"Identical contact phone number: {p1}", "deterministic_phone", 1.0
 
-        # 3. Compare email addresses
+        # 3. Deterministic Email match
         for email_key in ["business_email", "public_business_email", "contact_email", "email"]:
             e1 = str(r1.get(email_key, "")).strip().lower()
             e2 = str(r2.get(email_key, "")).strip().lower()
             if e1 and e2 and e1 == e2 and "@" in e1:
-                return True, f"Identical public contact email: {e1}"
+                return True, f"Identical public contact email: {e1}", "deterministic_email", 1.0
 
-        # 4. Compare entity / company names with fuzzy & token matching
+        # 4. Fuzzy & Token Similarity on Entity Names
         for name_key in ["company_name", "entity_name", "job_title", "title"]:
             n1 = str(r1.get(name_key, "")).strip()
             n2 = str(r2.get(name_key, "")).strip()
             if n1 and n2:
-                # Direct string equality (case-insensitive)
                 if n1.lower() == n2.lower():
-                    return True, f"Exact name match on {name_key}: '{n1}'"
+                    return True, f"Exact name match on {name_key}: '{n1}'", "exact_name", 1.0
 
-                # Token set overlap
                 jaccard = self.token_jaccard_similarity(n1, n2)
                 if jaccard >= 0.75:
-                    return True, f"High token overlap ({jaccard:.2f}) on {name_key}: '{n1}' vs '{n2}'"
+                    return True, f"High token overlap ({jaccard:.2f}) on {name_key}: '{n1}' vs '{n2}'", "token_jaccard", round(jaccard, 3)
 
-                # Jaro-Winkler similarity
                 jw = self.jaro_winkler_similarity(n1.lower(), n2.lower())
                 if jw >= 0.90:
-                    return True, f"High phonetic/string similarity ({jw:.2f}) on {name_key}: '{n1}' vs '{n2}'"
+                    return True, f"High phonetic/string similarity ({jw:.2f}) on {name_key}: '{n1}' vs '{n2}'", "jaro_winkler", round(jw, 3)
 
-        return False, ""
+        return False, "", "none", 0.0
 
     def deduplicate_records(
         self,
         records: List[Dict[str, Any]],
         key_fields: List[str]
-    ) -> Tuple[List[Dict[str, Any]], List[Tuple[Dict[str, Any], int, str]]]:
+    ) -> Tuple[List[Dict[str, Any]], List[Tuple[Dict[str, Any], int, str, str, float]]]:
         """
-        Deduplicates a list of records.
+        Deduplicates records with zero silent information destruction.
+        Maintains merge history and similarity metrics.
         Returns:
-            - unique_records: List of consolidated unique records
-            - duplicate_records_info: List of (duplicate_record, merged_into_index, reason)
+            - unique_records: List of enriched canonical records
+            - duplicate_records_info: List of (candidate, matched_index, reason, match_method, score)
         """
+        import uuid
+        from datetime import datetime, timezone
+
         unique_records: List[Dict[str, Any]] = []
-        duplicates_info: List[Tuple[Dict[str, Any], int, str]] = []
+        duplicates_info: List[Tuple[Dict[str, Any], int, str, str, float]] = []
 
         for candidate in records:
             matched_index = None
             match_reason = ""
+            matched_method = "none"
+            matched_score = 0.0
 
             for idx, existing in enumerate(unique_records):
-                is_dup, reason = self.are_records_similar(candidate, existing, key_fields)
+                res = self.are_records_similar(candidate, existing, key_fields)
+                is_dup = res[0]
+                reason = res[1]
+                m_method = res[2] if len(res) > 2 else "similarity"
+                m_score = res[3] if len(res) > 3 else 1.0
+
                 if is_dup:
                     matched_index = idx
                     match_reason = reason
+                    matched_method = m_method
+                    matched_score = m_score
                     break
 
             if matched_index is not None:
-                # Merge: enrich the existing record with any missing fields from candidate
                 existing = unique_records[matched_index]
+                group_id = existing.get("_duplicate_group_id") or str(uuid.uuid4())
+                existing["_duplicate_group_id"] = group_id
+
+                if "_merge_history" not in existing:
+                    existing["_merge_history"] = []
+
+                merged_fields = []
                 for k, v in candidate.items():
+                    if k.startswith("_"):
+                        continue
                     if v and not existing.get(k):
                         existing[k] = v
-                duplicates_info.append((candidate, matched_index, match_reason))
+                        merged_fields.append(k)
+
+                merge_event = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "match_method": matched_method,
+                    "similarity_score": matched_score,
+                    "reason": match_reason,
+                    "merged_fields": merged_fields,
+                    "merged_attributes": {k: v for k, v in candidate.items() if not k.startswith("_")}
+                }
+                existing["_merge_history"].append(merge_event)
+
+                candidate_copy = dict(candidate)
+                candidate_copy["_duplicate_group_id"] = group_id
+                candidate_copy["_match_method"] = matched_method
+                candidate_copy["_similarity_score"] = matched_score
+                candidate_copy["_canonical_index"] = matched_index
+
+                duplicates_info.append((candidate_copy, matched_index, match_reason, matched_method, matched_score))
             else:
-                unique_records.append(dict(candidate))
+                new_rec = dict(candidate)
+                new_rec["_duplicate_group_id"] = str(uuid.uuid4())
+                new_rec["_merge_history"] = []
+                unique_records.append(new_rec)
 
         return unique_records, duplicates_info

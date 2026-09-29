@@ -90,6 +90,8 @@ class DatasetService:
                     source_url=e.source_url,
                     snippet=e.snippet,
                     confidence=e.confidence,
+                    connector_id=getattr(e, "connector_id", None),
+                    extraction_method=getattr(e, "extraction_method", "structured_dom_parser"),
                     collected_at=e.collected_at
                 )
                 for e in r.evidence_items
@@ -109,6 +111,11 @@ class DatasetService:
                 field_transformations=r.field_transformations or {},
                 validation_errors=r.validation_errors or [],
                 deduplicated_with=r.deduplicated_with,
+                duplicate_group_id=getattr(r, "duplicate_group_id", None),
+                match_method=getattr(r, "match_method", None),
+                similarity_score=getattr(r, "similarity_score", None),
+                merge_history=getattr(r, "merge_history", []) or [],
+                provenance=getattr(r, "provenance", {}) or {},
                 evidence_items=evidence_models,
                 created_at=r.created_at
             ))
@@ -174,30 +181,54 @@ class DatasetService:
 
     @staticmethod
     def export_csv(db: Session, run_id: str) -> str:
+        chunks = list(DatasetService.stream_csv(db, run_id))
+        return "".join(chunks)
+
+    @staticmethod
+    def stream_csv(db: Session, run_id: str, chunk_size: int = 200):
+        """Streaming CSV generator for memory-efficient exports (Phase 16)."""
         run = db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
         if not run:
             raise ValueError(f"WorkflowRun {run_id} not found")
         workflow = db.query(Workflow).filter(Workflow.id == run.workflow_id).first()
-        records = db.query(DatasetRecord).filter(DatasetRecord.run_id == run_id).all()
 
         fields = [f["name"] for f in (workflow.fields_spec or [])]
-        extra_headers = ["is_valid", "confidence_score", "validation_issues"]
+        extra_headers = ["is_valid", "confidence_score", "validation_issues", "duplicate_group_id", "match_method"]
         all_headers = fields + extra_headers
 
-        output = io.StringIO()
-        writer = csv.writer(output)
+        buf = io.StringIO()
+        writer = csv.writer(buf)
         writer.writerow(all_headers)
+        yield buf.getvalue()
 
-        for r in records:
-            row = []
-            for f in fields:
-                row.append(r.data.get(f, ""))
-            row.append(str(r.is_valid))
-            row.append(f"{r.confidence_score:.2f}")
-            row.append("; ".join(r.validation_errors or []))
-            writer.writerow(row)
+        offset = 0
+        while True:
+            records = (
+                db.query(DatasetRecord)
+                .filter(DatasetRecord.run_id == run_id)
+                .order_by(DatasetRecord.created_at)
+                .offset(offset)
+                .limit(chunk_size)
+                .all()
+            )
+            if not records:
+                break
 
-        return output.getvalue()
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            for r in records:
+                row = []
+                for f in fields:
+                    row.append(r.data.get(f, ""))
+                row.append(str(r.is_valid))
+                row.append(f"{r.confidence_score:.2f}")
+                row.append("; ".join(r.validation_errors or []))
+                row.append(str(getattr(r, "duplicate_group_id", "") or ""))
+                row.append(str(getattr(r, "match_method", "") or ""))
+                writer.writerow(row)
+
+            yield buf.getvalue()
+            offset += chunk_size
 
     @staticmethod
     def export_json(db: Session, run_id: str) -> List[Dict[str, Any]]:
@@ -209,10 +240,51 @@ class DatasetService:
                 "is_valid": r.is_valid,
                 "confidence_score": r.confidence_score,
                 "validation_errors": r.validation_errors or [],
-                "evidence_count": len(r.evidence_items)
+                "evidence_count": len(r.evidence_items),
+                "duplicate_group_id": getattr(r, "duplicate_group_id", None),
+                "match_method": getattr(r, "match_method", None),
+                "merge_history": getattr(r, "merge_history", []) or []
             }
+            item["_provenance"] = getattr(r, "provenance", {}) or {}
             result.append(item)
         return result
+
+    @staticmethod
+    def stream_json(db: Session, run_id: str, chunk_size: int = 200):
+        """Streaming JSON generator for memory-efficient exports (Phase 16)."""
+        yield "[\n"
+        offset = 0
+        first = True
+        while True:
+            records = (
+                db.query(DatasetRecord)
+                .filter(DatasetRecord.run_id == run_id)
+                .order_by(DatasetRecord.created_at)
+                .offset(offset)
+                .limit(chunk_size)
+                .all()
+            )
+            if not records:
+                break
+
+            for r in records:
+                prefix = "" if first else ",\n"
+                first = False
+                item = dict(r.data)
+                item["_quality"] = {
+                    "is_valid": r.is_valid,
+                    "confidence_score": r.confidence_score,
+                    "validation_errors": r.validation_errors or [],
+                    "evidence_count": len(r.evidence_items),
+                    "duplicate_group_id": getattr(r, "duplicate_group_id", None),
+                    "match_method": getattr(r, "match_method", None),
+                    "merge_history": getattr(r, "merge_history", []) or []
+                }
+                item["_provenance"] = getattr(r, "provenance", {}) or {}
+                yield prefix + json.dumps(item, indent=2)
+
+            offset += chunk_size
+        yield "\n]"
 
 
 dataset_service = DatasetService()

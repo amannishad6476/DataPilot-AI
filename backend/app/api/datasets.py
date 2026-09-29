@@ -6,8 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.dataset import DatasetRecord
+from app.models.workflow import WorkflowRun
 from app.schemas.dataset import DatasetResponse, EvidenceItem
 from app.services.storage.dataset_service import dataset_service
+from app.core.security import get_current_user, UserContext
 
 router = APIRouter(tags=["Datasets"])
 
@@ -23,12 +25,19 @@ def get_run_dataset(
     sort_order: str = Query("asc", pattern="^(asc|desc)$", description="Sorting direction"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=200, description="Records per page"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_current_user)
 ):
     """
     Retrieve structured records produced by a run, with search, validity filtering,
     dynamic sorting, confidence filtering, and full evidence linkages.
     """
+    run = db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"WorkflowRun {run_id} not found")
+    if user.tenant_id != "*" and run.tenant_id != user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to dataset outside tenant")
+
     try:
         return dataset_service.get_dataset(
             db=db,
@@ -46,17 +55,24 @@ def get_run_dataset(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
+
 @router.get("/runs/{run_id}/export/csv")
 def export_dataset_csv(
     run_id: str,
     db: Session = Depends(get_db)
 ):
-    """Export dataset as RFC-compliant CSV with header row and quality metadata."""
+    """Export dataset as RFC-compliant CSV with header row and quality metadata using memory-efficient streaming."""
+    from fastapi.responses import StreamingResponse
     try:
-        csv_content = dataset_service.export_csv(db, run_id)
+        # Validate existence
+        from app.models.workflow import WorkflowRun
+        run = db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
+        if not run:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"WorkflowRun {run_id} not found")
+
         filename = f"datapilot_dataset_{run_id[:8]}.csv"
-        return Response(
-            content=csv_content,
+        return StreamingResponse(
+            dataset_service.stream_csv(db, run_id),
             media_type="text/csv",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )
@@ -69,12 +85,17 @@ def export_dataset_json(
     run_id: str,
     db: Session = Depends(get_db)
 ):
-    """Export dataset as structured JSON array with field values and quality scores."""
+    """Export dataset as structured JSON stream array with field values and quality scores."""
+    from fastapi.responses import StreamingResponse
     try:
-        json_data = dataset_service.export_json(db, run_id)
+        from app.models.workflow import WorkflowRun
+        run = db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
+        if not run:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"WorkflowRun {run_id} not found")
+
         filename = f"datapilot_dataset_{run_id[:8]}.json"
-        return Response(
-            content=json.dumps(json_data, indent=2),
+        return StreamingResponse(
+            dataset_service.stream_json(db, run_id),
             media_type="application/json",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )

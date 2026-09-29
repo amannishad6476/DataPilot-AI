@@ -60,6 +60,13 @@ Unlike traditional scrapers that rely on hardcoded keyword-to-script mappings or
 9. **Source Connectors & Gateway Health Dashboard**:
    - Dedicated health monitoring dashboard (`/connectors`) displaying total requests, success rates, average latency, and live ping testing.
 
+10. **Enterprise Hardening & Production Reliability**:
+    - **AI Safety & Policy Engine Boundary**: Treats LLMs as untrusted planners, statically validating DAG acyclicity, allowlisting execution actions, and rejecting SSRF URLs or prompt injection payloads.
+    - **Per-Connector Circuit Breaker**: State-machine resilience (`CLOSED` / `OPEN` / `HALF_OPEN`) preventing thread starvation on failing external endpoints.
+    - **Multi-Tenancy & RBAC**: Complete tenant isolation with role hierarchy (`OWNER` > `ADMIN` > `MEMBER` > `VIEWER`) and seamless zero-config fallback for local development.
+    - **Memory-Efficient Streaming Exports**: Low-footprint chunked CSV and JSON stream generation for high-volume datasets.
+    - **Self-Healing SQLite Schema Auto-Migration**: Dynamically ensures schema columns exist on startup without manual SQL scripts or data wipes.
+
 ---
 
 ## 🏗️ Architecture & Pipeline Flow
@@ -169,29 +176,22 @@ Analytics & Comparison Hub (Run Deltas, Entity Drift, Quality Metrics)
 
 ## 🧪 Automated Test Verification
 
-To run the complete backend test suite:
+To run the complete production backend test suite (37 tests across 12 test modules):
 
 ```powershell
 $env:SQLALCHEMY_CYTHON="0"; .\backend\venv\Scripts\python.exe -m pytest -v
 ```
 
-All 16 test suites pass cleanly with mocked/offline isolation:
-- `test_health_check`
-- `test_e2e_workflow_lifecycle`
-- `test_connector_registry`
-- `test_public_webpage_domain_security` (SSRF prevention & domain whitelist)
-- `test_public_webpage_extraction` (Live metadata, email/phone regex, structured schema)
-- `test_n8n_template_generation` (n8n JSON workflow specification)
-- `test_similarity_deduplication` (Fuzzy Jaro-Winkler & root domain matching)
-- `test_planner_reasoning` (Explainable AI planning directives)
-- `test_validator_detailed_and_normalizer_audit` (Field validation & transformation audit)
-- `test_e2e_phase3_workflow_lifecycle` (E2E run, rerun, timeline, quality, and comparison)
-- `test_run_cancellation` (Graceful execution cancellation)
-- `test_dynamic_sponsor_planner` (DAG dependency resolution)
-- `test_dynamic_job_planner` (Dynamic recruitment schema synthesis)
-- `test_connectors_api` (Connector discovery and health checking)
-- `test_n8n_endpoints` (n8n webhook receiver & template endpoints)
-- `test_real_execution_with_resilient_fallback` (Real execution + automatic fallback recovery)
+All 37 test suites pass cleanly with isolated fixtures:
+- `test_health_check` & `test_e2e_workflow_lifecycle` (FastAPI test client)
+- `test_policy_engine` (Plan validation, DAG cycle detection, unapproved actions, SSRF firewall, code injection filtering)
+- `test_connectors_resilience` (Circuit breaker state machine CLOSED -> OPEN -> HALF_OPEN, SSRF IP/domain firewall)
+- `test_auth_multitenant` (Role-based access control, tenant isolation, Bearer & API key authentication)
+- `test_deduplicator_history` (Deterministic matching, fuzzy Jaro-Winkler/Jaccard, non-destructive merge history)
+- `test_export_streaming` (Memory-efficient streaming chunk generators for CSV and JSON)
+- `test_dag_orchestrator` (Topological waves, sibling concurrency with asyncio.gather, failure cascade isolation)
+- `test_connectors` & `test_phase3` (SSRF prevention, live metadata extraction, n8n template generation, run comparison)
+- `test_planner` & `test_real_executor` (Reasoning synthesis, resilient execution with fallback recovery)
 
 To run the frontend production build:
 ```bash

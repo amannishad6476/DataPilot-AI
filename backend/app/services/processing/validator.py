@@ -126,6 +126,62 @@ class DataValidator:
                     else:
                         field_validations[rule.field] = "MISSING"
 
+            elif rule.rule_type == "domain_format":
+                if val_str:
+                    from app.services.processing.normalizer import DataNormalizer
+                    domain = DataNormalizer.extract_root_domain(val_str) or val_str.lower()
+                    if "." not in domain or len(domain.split(".")[-1]) < 2:
+                        msg = f"Field '{rule.field}' value '{val_str}' is not a valid domain"
+                        errors.append(msg)
+                        field_validations[rule.field] = "INVALID" if rule.severity == "error" else "NEEDS_REVIEW"
+                        if rule.severity == "error":
+                            is_strictly_valid = False
+                    else:
+                        passed_checks += 1
+                        field_validations[rule.field] = "VALID"
+                else:
+                    passed_checks += 0.5
+                    field_validations[rule.field] = "MISSING"
+
+            elif rule.rule_type == "numeric_range":
+                if val_str:
+                    try:
+                        num = float(re.sub(r'[^\d.-]', '', val_str))
+                        min_val = rule.params.get("min")
+                        max_val = rule.params.get("max")
+                        if (min_val is not None and num < float(min_val)) or (max_val is not None and num > float(max_val)):
+                            msg = f"Field '{rule.field}' value {num} is outside permitted range [{min_val}, {max_val}]"
+                            errors.append(msg)
+                            field_validations[rule.field] = "INVALID"
+                            if rule.severity == "error":
+                                is_strictly_valid = False
+                        else:
+                            passed_checks += 1
+                            field_validations[rule.field] = "VALID"
+                    except ValueError:
+                        errors.append(f"Field '{rule.field}' value '{val_str}' is not numeric")
+                        field_validations[rule.field] = "INVALID"
+                        if rule.severity == "error":
+                            is_strictly_valid = False
+                else:
+                    passed_checks += 0.5
+                    field_validations[rule.field] = "MISSING"
+
+            elif rule.rule_type == "date_iso":
+                if val_str:
+                    date_valid = bool(re.match(r'^\d{4}-\d{2}-\d{2}', val_str))
+                    if not date_valid:
+                        errors.append(f"Field '{rule.field}' value '{val_str}' is not an ISO date (YYYY-MM-DD)")
+                        field_validations[rule.field] = "INVALID"
+                        if rule.severity == "error":
+                            is_strictly_valid = False
+                    else:
+                        passed_checks += 1
+                        field_validations[rule.field] = "VALID"
+                else:
+                    passed_checks += 0.5
+                    field_validations[rule.field] = "MISSING"
+
             elif rule.rule_type == "regex":
                 pattern = rule.params.get("pattern", "")
                 if pattern and val_str:
@@ -140,6 +196,7 @@ class DataValidator:
                         field_validations[rule.field] = "VALID"
                 else:
                     passed_checks += 1
+
 
         confidence = round(passed_checks / max(total_checks, 1), 2)
         confidence = max(0.50, min(0.99, confidence))

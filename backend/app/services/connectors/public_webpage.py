@@ -1,3 +1,4 @@
+import asyncio
 import re
 import time
 import json
@@ -98,29 +99,55 @@ class PublicWebPageConnector(BaseSourceConnector):
             **request.headers,
         }
 
-        start_time = time.perf_counter()
+        from app.services.connectors.registry import connector_registry
+        cb = connector_registry.get_circuit_breaker(self.connector_id)
+        cb.ensure_executable()
 
-        async with httpx.AsyncClient(
-            timeout=request.timeout_sec,
-            follow_redirects=True,
-            max_redirects=3,
-            verify=True
-        ) as client:
-            try:
-                response = await client.get(target_url, headers=headers, params=request.params)
-                response.raise_for_status()
-                content = response.text
-                status_code = response.status_code
-                content_type = response.headers.get("content-type", "text/html")
-            except httpx.TimeoutException as e:
-                logger.error(f"Timeout fetching URL {target_url}: {e}")
-                raise TimeoutError(f"Connection timed out after {request.timeout_sec}s fetching {target_url}") from e
-            except httpx.HTTPStatusError as e:
-                logger.error(f"HTTP Error {e.response.status_code} fetching URL {target_url}")
-                raise e
-            except Exception as e:
-                logger.error(f"Error fetching URL {target_url}: {e}")
-                raise e
+        start_time = time.perf_counter()
+        max_retries = 3
+        backoff_sec = 0.5
+        last_exception = None
+
+        for attempt in range(max_retries):
+            async with httpx.AsyncClient(
+                timeout=request.timeout_sec,
+                follow_redirects=True,
+                max_redirects=3,
+                verify=True
+            ) as client:
+                try:
+                    response = await client.get(target_url, headers=headers, params=request.params)
+                    if response.status_code == 429 or response.status_code >= 500:
+                        if attempt < max_retries - 1:
+                            logger.warning(f"HTTP {response.status_code} on attempt {attempt+1}/{max_retries} for {target_url}. Retrying in {backoff_sec}s...")
+                            await asyncio.sleep(backoff_sec)
+                            backoff_sec *= 2
+                            continue
+                    response.raise_for_status()
+                    content = response.text
+                    status_code = response.status_code
+                    content_type = response.headers.get("content-type", "text/html")
+                    last_exception = None
+                    break
+                except (httpx.TimeoutException, httpx.NetworkError) as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Network/timeout error on attempt {attempt+1}/{max_retries} for {target_url}. Retrying in {backoff_sec}s...")
+                        await asyncio.sleep(backoff_sec)
+                        backoff_sec *= 2
+                        continue
+                    break
+                except httpx.HTTPStatusError as e:
+                    last_exception = e
+                    break
+                except Exception as e:
+                    last_exception = e
+                    break
+
+        if last_exception:
+            if isinstance(last_exception, httpx.TimeoutException):
+                raise TimeoutError(f"Connection timed out after {max_retries} attempts fetching {target_url}") from last_exception
+            raise last_exception
 
         response_time_ms = round((time.perf_counter() - start_time) * 1000, 2)
 

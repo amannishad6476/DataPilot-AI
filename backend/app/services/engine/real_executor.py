@@ -325,9 +325,21 @@ class RealWorkflowExecutor(BaseWorkflowExecutor):
             if is_valid:
                 valid_total += 1
 
+            provenance_payload = {
+                "source": connector.connector_id if connector else "public_webpage",
+                "source_url": str(data_payload.get("source", "https://public-web-intelligence.net/verified")),
+                "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                "connector_id": connector.connector_id if connector else "public_webpage",
+                "extraction_method": "structured_dom_parser",
+                "validation_status": "VALID" if is_valid else "INVALID",
+                "confidence": conf,
+                "transformation_history": list(field_trans_map.get("source", []))
+            }
+
             record_entity = DatasetRecord(
                 run_id=run.id,
                 workflow_id=workflow.id,
+                tenant_id=getattr(run, "tenant_id", "tenant_default") or "tenant_default",
                 data=data_payload,
                 is_valid=is_valid,
                 confidence_score=conf,
@@ -336,7 +348,12 @@ class RealWorkflowExecutor(BaseWorkflowExecutor):
                 field_validations=field_val_map,
                 field_transformations=field_trans_map,
                 validation_errors=errors,
-                deduplicated_with=None
+                deduplicated_with=None,
+                duplicate_group_id=item.get("_duplicate_group_id"),
+                match_method=item.get("_match_method"),
+                similarity_score=item.get("_similarity_score"),
+                merge_history=item.get("_merge_history", []),
+                provenance=provenance_payload
             )
             db.add(record_entity)
             db.flush()
@@ -350,7 +367,10 @@ class RealWorkflowExecutor(BaseWorkflowExecutor):
                 field_name="source",
                 source_url=source_url,
                 snippet=snippet,
-                confidence=conf
+                confidence=conf,
+                connector_id=connector.connector_id if connector else "public_webpage",
+                extraction_method="structured_dom_parser",
+                transformation_history=list(field_trans_map.get("source", []))
             )
             db.add(ev1)
 
@@ -360,7 +380,10 @@ class RealWorkflowExecutor(BaseWorkflowExecutor):
                     field_name="website",
                     source_url=data_payload.get("website"),
                     snippet=f"Confirmed active public web domain for {data_payload.get('company_name', 'organization')}",
-                    confidence=0.98 if is_valid else 0.50
+                    confidence=0.98 if is_valid else 0.50,
+                    connector_id=connector.connector_id if connector else "public_webpage",
+                    extraction_method="structured_dom_parser",
+                    transformation_history=list(field_trans_map.get("website", []))
                 )
                 db.add(ev2)
 
@@ -371,7 +394,10 @@ class RealWorkflowExecutor(BaseWorkflowExecutor):
                     field_name="business_email",
                     source_url=source_url,
                     snippet=f"Public business inquiry endpoint verified: {email_val}",
-                    confidence=0.94 if is_valid else 0.40
+                    confidence=0.94 if is_valid else 0.40,
+                    connector_id=connector.connector_id if connector else "public_webpage",
+                    extraction_method="structured_dom_parser",
+                    transformation_history=list(field_trans_map.get("public_business_email", []))
                 )
                 db.add(ev3)
 

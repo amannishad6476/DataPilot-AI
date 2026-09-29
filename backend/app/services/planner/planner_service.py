@@ -39,13 +39,29 @@ class PlannerService:
         logger.info("Generating workflow plan via Dynamic Semantic Planner...")
         return await self.heuristic_planner.generate_plan(prompt, target_count)
 
-    async def create_and_save_workflow(self, prompt: str, target_count: int, db: Session) -> Workflow:
+    async def create_and_save_workflow(
+        self,
+        prompt: str,
+        target_count: int,
+        db: Session,
+        tenant_id: str = "tenant_default",
+        user_id: str = "usr_local_owner"
+    ) -> Workflow:
+        from app.services.planner.policy_engine import policy_engine
+        from app.core.errors import PolicyViolationError
+
         plan: PlannerOutput = await self.generate_plan(prompt, target_count)
 
-        # Step 3 requirement: Workflow Validation
-        # Pydantic schema validation has already succeeded in generate_plan
+        # Policy & Safety Validation (Untrusted LLM Boundary)
+        is_valid, violations = policy_engine.validate_plan(plan)
+        if not is_valid:
+            logger.error(f"PolicyEngine rejected generated workflow plan: {violations}")
+            raise PolicyViolationError(
+                message="AI-generated workflow plan was rejected by the security policy engine.",
+                violations=violations
+            )
 
-        # Persist to database
+        # Persist to database with audit and ownership boundary
         workflow = Workflow(
             prompt=prompt,
             goal=plan.goal,
@@ -57,7 +73,12 @@ class PlannerService:
             validation_rules=[r.model_dump() for r in plan.validation_rules],
             deduplication_strategy=plan.deduplication_strategy,
             output_format=plan.output_format,
-            reasoning=plan.reasoning
+            reasoning=plan.reasoning,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            workflow_version=1,
+            planner_version="2.0.0",
+            policy_status="APPROVED"
         )
         db.add(workflow)
         db.commit()

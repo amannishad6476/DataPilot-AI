@@ -10,6 +10,8 @@ class EvidenceItem(BaseModel):
     source_url: str
     snippet: str
     confidence: float = 0.95
+    connector_id: Optional[str] = None
+    extraction_method: Optional[str] = "structured_dom_parser"
     collected_at: datetime
 
 
@@ -24,8 +26,14 @@ class RecordItem(BaseModel):
     field_transformations: Dict[str, List[str]] = Field(default_factory=dict)
     validation_errors: List[str] = Field(default_factory=list)
     deduplicated_with: Optional[str] = None
+    duplicate_group_id: Optional[str] = None
+    match_method: Optional[str] = None
+    similarity_score: Optional[float] = None
+    merge_history: List[Dict[str, Any]] = Field(default_factory=list)
+    provenance: Optional[Dict[str, Any]] = Field(default_factory=dict)
     evidence_items: List[EvidenceItem] = Field(default_factory=list)
     created_at: datetime
+
 
 
 class DataQualitySummary(BaseModel):

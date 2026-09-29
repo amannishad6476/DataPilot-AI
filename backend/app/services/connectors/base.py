@@ -60,6 +60,11 @@ class ConnectorDescriptor(BaseModel):
     supports_fetch: bool
     supports_structured_data: bool
     health_status: ConnectorStatus
+    authentication_type: str = "NONE"
+    timeout_sec: float = 12.0
+    last_success: Optional[str] = None
+    last_failure: Optional[str] = None
+    supported_operations: List[str] = Field(default_factory=lambda: ["fetch", "search", "extract"])
 
 
 class BaseSourceConnector(ABC):
@@ -74,55 +79,20 @@ class BaseSourceConnector(ABC):
     supports_fetch: bool = True
     supports_structured_data: bool = True
     health_status: ConnectorStatus = ConnectorStatus.ACTIVE
+    authentication_type: str = "NONE"
+    timeout_sec: float = 12.0
+    last_success: Optional[str] = None
+    last_failure: Optional[str] = None
+    supported_operations: List[str] = ["fetch", "search", "extract"]
 
     def is_domain_permitted(self, url: str) -> bool:
         """
-        Validates that the target URL complies with the allowed domains list and does NOT resolve
-        to private, loopback, link-local, or cloud metadata endpoints.
+        Validates target URL against SSRF safety rules, disallowing loopback,
+        private RFC 1918 subnets, and cloud metadata IPs.
         """
-        if not url:
-            return False
-        try:
-            parsed = urlparse(url)
-            if parsed.scheme not in ["http", "https"]:
-                return False
-
-            host = parsed.netloc.lower().split(":")[0].strip()
-            if not host:
-                return False
-
-            # Disallow localhost and internal domain suffixes
-            if host in ["localhost", "0.0.0.0"] or host.endswith(
-                (".localhost", ".local", ".internal", ".lan", ".corp", ".home.arpa")
-            ):
-                return False
-
-            # Check if host is a raw IP address (v4 or v6)
-            try:
-                ip = ipaddress.ip_address(host)
-                if (
-                    ip.is_private
-                    or ip.is_loopback
-                    or ip.is_link_local
-                    or ip.is_reserved
-                    or ip.is_multicast
-                    or ip.is_unspecified
-                ):
-                    return False
-            except ValueError:
-                # Host is a domain name, not a raw IP address
-                pass
-
-            if not self.allowed_domains or "*" in self.allowed_domains:
-                return True
-
-            for allowed in self.allowed_domains:
-                allowed_clean = allowed.lower().lstrip(".")
-                if host == allowed_clean or host.endswith(f".{allowed_clean}"):
-                    return True
-            return False
-        except Exception:
-            return False
+        from app.services.connectors.ssrf_firewall import validate_url_security
+        is_safe, _ = validate_url_security(url, self.allowed_domains)
+        return is_safe
 
     @abstractmethod
     async def fetch(self, request: FetchRequest) -> RawFetchedDocument:
@@ -156,4 +126,9 @@ class BaseSourceConnector(ABC):
             supports_fetch=self.supports_fetch,
             supports_structured_data=self.supports_structured_data,
             health_status=self.health_status,
+            authentication_type=self.authentication_type,
+            timeout_sec=self.timeout_sec,
+            last_success=self.last_success,
+            last_failure=self.last_failure,
+            supported_operations=self.supported_operations,
         )

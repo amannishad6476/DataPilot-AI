@@ -51,17 +51,42 @@ app.add_middleware(
 )
 
 
+# Mount API routers
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+@app.middleware("http")
+async def add_observability_middleware(request: Request, call_next):
+    import time
+    import uuid
+    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    response.headers["X-Request-ID"] = request_id
+    response.headers["X-Response-Time"] = f"{duration_ms}ms"
+    return response
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    from app.core.errors import AppException
+    if isinstance(exc, AppException):
+        return exc.to_response()
+
     logger.error(f"Unhandled server exception on {request.url.path}: {exc}", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "Internal server error", "error": str(exc)}
+        content={
+            "detail": "Internal server error",
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": str(exc),
+                "retryable": False
+            }
+        }
     )
 
-
-# Mount API routers
-app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")
