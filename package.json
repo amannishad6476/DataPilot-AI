@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "Root workspace proxy for DataPilot AI frontend and scripts",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
     "dev": "npm --prefix frontend run dev",
     "backend": "powershell -ExecutionPolicy Bypass -Command \"$env:SQLALCHEMY_CYTHON='0'; .\\backend\\venv\\Scripts\\python.exe backend\\run.py\"",
