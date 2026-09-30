@@ -148,11 +148,11 @@ export default function DatasetPage({ params }: { params: Promise<{ id: string }
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse flex-shrink-0" />
             <span>
-              <strong>DEMO SANDBOX DATA:</strong> High-fidelity local simulation validating email/phone schemas, fuzzy deduplication, and evidence traceability.
+              <strong>SANDBOX SIMULATION DATA:</strong> High-fidelity local simulation validating email/phone schemas, fuzzy deduplication, and evidence traceability.
             </span>
           </div>
           <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider self-start sm:self-auto">
-            Local Deterministic Run
+            Deterministic Sandbox Run
           </span>
         </div>
       )}

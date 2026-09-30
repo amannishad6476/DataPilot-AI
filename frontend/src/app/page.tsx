@@ -18,31 +18,31 @@ import { api } from '@/lib/api';
 
 const EXAMPLE_PROMPTS = [
   {
-    title: 'College Fest Sponsor Intelligence (Hackathon Demo)',
+    title: 'College Event Sponsor Intelligence',
     prompt:
       'Find 30 potential sponsors for a college technical fest in Lucknow. Collect company name, industry, website, public business email, phone, location and source. Remove duplicates and validate the results.',
-    tag: 'Sponsorship',
+    tag: 'Sponsorship Intelligence',
     count: 30,
   },
   {
-    title: 'B2B Tech Startups in Bangalore',
+    title: 'B2B Technology Companies',
     prompt:
       'Extract 25 high-growth AI and Cloud startups in Bangalore with company name, founders, website, careers page, funding stage and public contact email.',
-    tag: 'Sales Leads',
+    tag: 'Market Intelligence',
     count: 25,
   },
   {
-    title: 'Remote Platform & DevOps Jobs',
+    title: 'Platform & DevOps Talent Intelligence',
     prompt:
       'Gather 40 remote Senior DevOps & Platform Engineer jobs with company name, salary range, tech stack, apply link and verified posting date.',
-    tag: 'Recruitment',
+    tag: 'Talent Intelligence',
     count: 40,
   },
   {
-    title: 'ClimateTech & Clean Energy VC Funds',
+    title: 'Climate & Clean Energy Investor Intelligence',
     prompt:
       'Find 20 venture capital and angel funds in India actively investing in ClimateTech & Clean Energy with portfolio size, lead partner, and contact URL.',
-    tag: 'Venture Capital',
+    tag: 'Investment Intelligence',
     count: 20,
   },
 ];
@@ -110,7 +110,7 @@ export default function HomePage() {
               rows={4}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="e.g. Find 30 potential sponsors for a college technical fest in Lucknow. Collect company name, industry, website, public business email, phone, location and source. Remove duplicates and validate the results."
+              placeholder="Describe what you need to research, enrich, validate or monitor. For example: Find potential technology partners for our next event and collect company name, industry, website, public contact details, location and source evidence."
               className="w-full p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-slate-100 placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all font-sans leading-relaxed resize-none shadow-inner"
               required
             />
@@ -133,7 +133,7 @@ export default function HomePage() {
 
               <div className="hidden md:flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-xl border border-slate-800 text-xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span className="text-slate-300">Public/Permitted Sources Only</span>
+                <span className="text-slate-300">Public & Permitted Sources</span>
               </div>
             </div>
 
@@ -164,11 +164,16 @@ export default function HomePage() {
           )}
         </form>
 
-        {/* Quick Example Prompts */}
+        {/* Quick Example Prompts / Workflow Templates */}
         <div className="mt-8 pt-6 border-t border-slate-800/80">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-            Pre-built Hackathon Test Cases & Templates:
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3">
+            <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              Workflow Templates
+            </p>
+            <span className="text-[11px] text-slate-500">
+              Start with a proven intelligence workflow or describe your own requirement.
+            </span>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {EXAMPLE_PROMPTS.map((ex, idx) => (
               <button
@@ -178,13 +183,13 @@ export default function HomePage() {
                   setPrompt(ex.prompt);
                   setTargetCount(ex.count);
                 }}
-                className={`p-3 rounded-xl border text-left transition-all text-xs flex flex-col justify-between group ${
+                className={`p-3.5 rounded-xl border text-left transition-all text-xs flex flex-col justify-between group ${
                   prompt === ex.prompt
                     ? 'bg-cyan-500/10 border-cyan-500/30 text-slate-200'
                     : 'bg-slate-950/60 border-slate-800/80 text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
                 }`}
               >
-                <div className="flex items-center justify-between w-full mb-1">
+                <div className="flex items-center justify-between w-full mb-1.5">
                   <span className="font-semibold text-slate-200 group-hover:text-cyan-300 transition-colors">
                     {ex.title}
                   </span>

@@ -33,10 +33,10 @@ export function Navbar() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                  DATA PILOT AI
+                  DATAPILOT AI
                 </span>
                 <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                  v1.0
+                  AI DATA INTELLIGENCE
                 </span>
               </div>
               <p className="text-xs text-slate-400 hidden sm:block">
