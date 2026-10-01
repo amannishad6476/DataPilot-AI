@@ -49,11 +49,10 @@ export function Navbar() {
           <nav className="hidden md:flex items-center gap-1 pl-4 border-l border-slate-800">
             <Link
               href="/"
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                pathname === '/'
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${pathname === '/'
+                ? 'bg-slate-800 text-white'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                }`}
             >
               <Sparkles className="w-4 h-4 text-cyan-400" />
               Pipeline Studio
@@ -61,11 +60,10 @@ export function Navbar() {
 
             <Link
               href="/history"
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                pathname.startsWith('/history')
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${pathname.startsWith('/history')
+                ? 'bg-slate-800 text-white'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                }`}
             >
               <History className="w-4 h-4 text-indigo-400" />
               Runs & History
@@ -73,11 +71,10 @@ export function Navbar() {
 
             <Link
               href="/connectors"
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                pathname.startsWith('/connectors')
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${pathname.startsWith('/connectors')
+                ? 'bg-slate-800 text-white'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                }`}
             >
               <Cpu className="w-4 h-4 text-emerald-400" />
               Source Health
@@ -89,25 +86,24 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs">
             <span
-              className={`w-2 h-2 rounded-full ${
-                backendHealthy === true
-                  ? 'bg-emerald-400 shadow-sm shadow-emerald-400 animate-pulse'
-                  : backendHealthy === false
+              className={`w-2 h-2 rounded-full ${backendHealthy === true
+                ? 'bg-emerald-400 shadow-sm shadow-emerald-400 animate-pulse'
+                : backendHealthy === false
                   ? 'bg-rose-400'
                   : 'bg-amber-400'
-              }`}
+                }`}
             />
             <span className="text-slate-300 font-mono text-[11px]">
               {backendHealthy === true
                 ? 'Engine Online'
                 : backendHealthy === false
-                ? 'Backend Offline'
-                : 'Connecting...'}
+                  ? 'Backend Offline'
+                  : 'Connecting...'}
             </span>
           </div>
 
           <a
-            href="http://localhost:8000/docs"
+            href="https://datapilot-ai-vdi7.onrender.com/docs"
             target="_blank"
             rel="noreferrer"
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors"
@@ -133,11 +129,10 @@ export function Navbar() {
           <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-              pathname === '/'
-                ? 'bg-slate-800 text-white'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === '/'
+              ? 'bg-slate-800 text-white'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
           >
             <Sparkles className="w-4 h-4 text-cyan-400" />
             Pipeline Studio
@@ -146,11 +141,10 @@ export function Navbar() {
           <Link
             href="/history"
             onClick={() => setMobileMenuOpen(false)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-              pathname.startsWith('/history')
-                ? 'bg-slate-800 text-white'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname.startsWith('/history')
+              ? 'bg-slate-800 text-white'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
           >
             <History className="w-4 h-4 text-indigo-400" />
             Runs & History
@@ -159,11 +153,10 @@ export function Navbar() {
           <Link
             href="/connectors"
             onClick={() => setMobileMenuOpen(false)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-              pathname.startsWith('/connectors')
-                ? 'bg-slate-800 text-white'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname.startsWith('/connectors')
+              ? 'bg-slate-800 text-white'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
           >
             <Cpu className="w-4 h-4 text-emerald-400" />
             Source Health
@@ -172,7 +165,7 @@ export function Navbar() {
           <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400 font-mono">
             <span>FastAPI Backend Docs:</span>
             <a
-              href="http://localhost:8000/docs"
+              href="https://datapilot-ai-vdi7.onrender.com/docs"
               target="_blank"
               rel="noreferrer"
               className="text-cyan-400 hover:underline"
