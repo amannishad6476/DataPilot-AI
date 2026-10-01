@@ -10,17 +10,66 @@
 :root:not(.dark),
 html.light,
 html.light body {
-  --color-slate-950: #f8fafc; /* Canvas & Page Background */
-  --color-slate-900: #ffffff; /* Card Backgrounds, Panels, Drawers */
-  --color-slate-850: #f1f5f9; /* Card Subtle Hover */
-  --color-slate-800: #e2e8f0; /* Borders, Dividers */
-  --color-slate-700: #cbd5e1; /* Hover Borders, Active state */
-  --color-slate-600: #94a3b8; /* Subtle Icons & Accents */
-  --color-slate-500: #64748b; /* Secondary Muted Labels */
+  /* Slate Grayscale: Inverted for Crisp High-Contrast Light Mode */
+  --color-slate-950: #f8fafc; /* Canvas / Page Background */
+  --color-slate-900: #ffffff; /* Card / Panel / Modal / Dropdown Background */
+  --color-slate-850: #f1f5f9; /* Subtle Card Hover / Active Container */
+  --color-slate-800: #e2e8f0; /* Subtle Borders & Dividers */
+  --color-slate-700: #cbd5e1; /* Active Borders / Focus */
+  --color-slate-600: #94a3b8; /* Icons & Inactive Elements */
+  --color-slate-500: #64748b; /* Muted Secondary Labels */
   --color-slate-400: #475569; /* Body Secondary Text */
   --color-slate-300: #334155; /* Body Primary Text */
-  --color-slate-200: #1e293b; /* Subheadings */
-  --color-slate-100: #0f172a; /* Strong Headings */
+  --color-slate-200: #1e293b; /* Headings */
+  --color-slate-100: #0f172a; /* Strong Titles */
+  --color-white: #0f172a;     /* In Light Mode, text-white becomes Dark Slate! */
+
+  /* Pastel Soft Tints for -950 backgrounds: Prevents pitch-black gradients in Light Mode */
+  --color-blue-950: #eff6ff;
+  --color-purple-950: #faf5ff;
+  --color-cyan-950: #ecfeff;
+  --color-amber-950: #fffbeb;
+  --color-sky-950: #f0f9ff;
+  --color-emerald-950: #ecfdf5;
+  --color-rose-950: #fff1f2;
+  --color-indigo-950: #eef2ff;
+
+  /* High-Contrast Accessible Text Colors for -100, -200, -300 & -400 in Light Mode
+     Prevents pastel/faint colors from looking white on white backgrounds */
+  --color-cyan-100: #155e75;
+  --color-cyan-200: #0e7490;
+  --color-cyan-300: #0891b2;
+  --color-cyan-400: #0284c7;
+
+  --color-emerald-100: #065f46;
+  --color-emerald-200: #047857;
+  --color-emerald-300: #059669;
+  --color-emerald-400: #10b981;
+
+  --color-amber-100: #92400e;
+  --color-amber-200: #b45309;
+  --color-amber-300: #d97706;
+  --color-amber-400: #f59e0b;
+
+  --color-rose-100: #9f1239;
+  --color-rose-200: #be123c;
+  --color-rose-300: #e11d48;
+  --color-rose-400: #f43f5e;
+
+  --color-indigo-100: #3730a3;
+  --color-indigo-200: #4338ca;
+  --color-indigo-300: #4f46e5;
+  --color-indigo-400: #6366f1;
+
+  --color-purple-100: #6b21a8;
+  --color-purple-200: #7e22ce;
+  --color-purple-300: #9333ea;
+  --color-purple-400: #a855f7;
+
+  --color-blue-100: #1e40af;
+  --color-blue-200: #1d4ed8;
+  --color-blue-300: #2563eb;
+  --color-blue-400: #3b82f6;
 
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -42,6 +91,51 @@ html.dark body {
   --color-slate-300: #cbd5e1;
   --color-slate-200: #e2e8f0;
   --color-slate-100: #f8fafc;
+  --color-white: #ffffff;
+
+  --color-blue-950: #172554;
+  --color-purple-950: #3b0764;
+  --color-cyan-950: #083344;
+  --color-amber-950: #451a03;
+  --color-sky-950: #082f49;
+  --color-emerald-950: #022c22;
+  --color-rose-950: #4c0519;
+  --color-indigo-950: #1e1b4b;
+
+  --color-cyan-100: #cffafe;
+  --color-cyan-200: #a5f3fc;
+  --color-cyan-300: #67e8f9;
+  --color-cyan-400: #22d3ee;
+
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+
+  --color-rose-100: #ffe4e6;
+  --color-rose-200: #fecdd3;
+  --color-rose-300: #fda4af;
+  --color-rose-400: #fb7185;
+
+  --color-indigo-100: #e0e7ff;
+  --color-indigo-200: #c7d2fe;
+  --color-indigo-300: #a5b4fc;
+  --color-indigo-400: #818cf8;
+
+  --color-purple-100: #f3e8ff;
+  --color-purple-200: #e9d5ff;
+  --color-purple-300: #d8b4fe;
+  --color-purple-400: #c084fc;
+
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
 
   --background: #020617;
   --foreground: #f8fafc;
@@ -58,22 +152,15 @@ body {
 }
 
 /* ==========================================================================
-   LIGHT MODE REFINEMENTS
+   LIGHT MODE SPECIFIC VISUAL ENHANCEMENTS
    ========================================================================== */
 
-/* In Light Mode, map text-white to dark slate unless on colored buttons */
-html.light h1.text-white,
-html.light h2.text-white,
-html.light h3.text-white,
-html.light h4.text-white,
-html.light strong.text-white,
-html.light span.text-white:not([class*="bg-indigo-"]):not([class*="bg-cyan-"]):not([class*="bg-emerald-"]):not([class*="bg-rose-"]):not([class*="bg-gradient-"]),
-html.light p.text-white,
-html.light div.text-white {
-  color: #0f172a;
+/* In Light Mode, map text-white to dark slate everywhere */
+html.light .text-white {
+  color: #0f172a !important;
 }
 
-/* Ensure colored pills/buttons preserve white text */
+/* Preserve genuine pure white text on solid buttons & prominent CTA badges */
 html.light .bg-indigo-600,
 html.light .bg-indigo-600 *,
 html.light .bg-cyan-600,
@@ -82,23 +169,54 @@ html.light .bg-emerald-600,
 html.light .bg-emerald-600 *,
 html.light .bg-rose-600,
 html.light .bg-rose-600 *,
-html.light button.bg-indigo-600,
-html.light .shadow-sm.bg-indigo-600 {
+html.light .bg-blue-600,
+html.light .bg-blue-600 *,
+html.light [class*="bg-indigo-600"],
+html.light [class*="bg-indigo-600"] * {
+  --color-white: #ffffff !important;
   color: #ffffff !important;
 }
 
-/* In Light Mode, gradient button text retains high-contrast slate-950 */
-html.light button.bg-gradient-to-r {
+/* Gradient CTA Buttons retain dark text in light mode */
+html.light button.bg-gradient-to-r,
+html.light a.bg-gradient-to-r {
   color: #041226 !important;
 }
 
-/* Card and Container Shadows in Light Mode */
-html.light .shadow-2xl,
-html.light .shadow-xl {
-  box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -4px rgba(15, 23, 42, 0.03) !important;
+/* Solid card styling in Light Mode (replaces washed-out opacity) */
+html.light .bg-slate-900\/60,
+html.light .bg-slate-900\/40,
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/90,
+html.light .bg-slate-900 {
+  background-color: #ffffff !important;
 }
 
-/* Crisp Input Styling in Light Mode */
+html.light .bg-slate-950\/60,
+html.light .bg-slate-950\/70,
+html.light .bg-slate-950\/80 {
+  background-color: #ffffff !important;
+}
+
+html.light .bg-slate-950\/40,
+html.light .bg-slate-950\/30 {
+  background-color: #f8fafc !important;
+}
+
+/* Clean, crisp border color in light mode */
+html.light .border-slate-800,
+html.light .border-slate-800\/80,
+html.light .border-slate-800\/60 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Subtle, polished elevation shadows in light mode */
+html.light .shadow-2xl,
+html.light .shadow-xl {
+  box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.05), 0 4px 6px -4px rgba(15, 23, 42, 0.02) !important;
+}
+
+/* Crisp Input / Textarea Styling in Light Mode */
 html.light input,
 html.light textarea,
 html.light select {
