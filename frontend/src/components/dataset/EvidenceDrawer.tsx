@@ -43,7 +43,7 @@ export function EvidenceDrawer({ record, onClose }: EvidenceDrawerProps) {
 
         {/* Record Title */}
         <div className="mt-4">
-          <h2 className="text-xl font-bold text-white tracking-tight">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
             {entityTitle}
           </h2>
           {record.data.industry && (

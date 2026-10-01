@@ -163,7 +163,7 @@ export const CustomStepNode = memo(({ data }: NodeProps<CustomStepNodeType>) => 
       </div>
 
       {/* Step Title */}
-      <h3 className="text-sm font-semibold text-white tracking-tight mb-1 truncate">
+      <h3 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight mb-1 truncate">
         {step.name}
       </h3>
 

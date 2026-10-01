@@ -36,7 +36,7 @@ export function StepInspectorDrawer({ step, statusInfo, onClose }: StepInspector
 
         {/* Title */}
         <div className="mt-4">
-          <h2 className="text-lg font-bold text-white tracking-tight">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
             {step.name}
           </h2>
           <p className="mt-2 text-sm text-slate-300 leading-relaxed">

@@ -114,7 +114,7 @@ export default function ConnectorsPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <Radio className="w-6 h-6 text-cyan-400" />
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               Source Connectors & Gateway Health
             </h1>
           </div>

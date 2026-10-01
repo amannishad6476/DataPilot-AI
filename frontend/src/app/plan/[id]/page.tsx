@@ -125,7 +125,7 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
             <span>Back to Studio</span>
           </Link>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               Dynamic Workflow Architecture
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
@@ -263,7 +263,7 @@ export default function WorkflowPlanPage({ params }: { params: Promise<{ id: str
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white tracking-wide">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-wide">
                   AI Planning Rationale & Execution Architecture
                 </h3>
                 <p className="text-[11px] text-slate-400">

@@ -80,9 +80,9 @@ export default function HomePage() {
           <span>AUTONOMOUS DATA INTELLIGENCE PLATFORM</span>
         </div>
 
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white">
           From Natural Language to{' '}
-          <span className="bg-gradient-to-r from-cyan-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 dark:from-cyan-400 dark:via-indigo-400 dark:to-fuchsia-400 bg-clip-text text-transparent">
             Actionable Data.
           </span>
         </h1>
@@ -212,7 +212,7 @@ export default function HomePage() {
           <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
             <Cpu className="w-4 h-4" />
           </div>
-          <h3 className="text-sm font-semibold text-white">Genuine Dynamic Planner</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Genuine Dynamic Planner</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
             Zero hardcoded keyword scrapers. LLM decomposes requests into typed DAG steps with explicit dependency graphs.
           </p>
@@ -222,7 +222,7 @@ export default function HomePage() {
           <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
             <ShieldCheck className="w-4 h-4" />
           </div>
-          <h3 className="text-sm font-semibold text-white">RFC & Format Validation</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">RFC & Format Validation</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
             Validates email standards, phone numbers, and URL reachability with confidence integrity scoring.
           </p>
@@ -232,7 +232,7 @@ export default function HomePage() {
           <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
             <GitMerge className="w-4 h-4" />
           </div>
-          <h3 className="text-sm font-semibold text-white">Fuzzy Similarity Dedup</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Fuzzy Similarity Dedup</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
             Jaro-Winkler, Levenshtein and root domain matching catches aliases and near-duplicates before consolidation.
           </p>
@@ -242,7 +242,7 @@ export default function HomePage() {
           <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
             <FileSearch className="w-4 h-4" />
           </div>
-          <h3 className="text-sm font-semibold text-white">100% Traceability Evidence</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">100% Traceability Evidence</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
             Every cell links back to its verified public source URL with exact citation quotes and collection timestamps.
           </p>

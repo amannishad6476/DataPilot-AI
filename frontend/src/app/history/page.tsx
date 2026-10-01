@@ -148,7 +148,7 @@ export default function HistoryPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <History className="w-6 h-6 text-indigo-400" />
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               Execution Runs & Historical Archive
             </h1>
           </div>

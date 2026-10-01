@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@xyflow/react/dist/style.css";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ==========================================================================
    THEME DESIGN TOKENS
@@ -155,8 +156,17 @@ body {
    LIGHT MODE SPECIFIC VISUAL ENHANCEMENTS
    ========================================================================== */
 
-/* In Light Mode, map text-white to dark slate everywhere */
-html.light .text-white {
+/* In Light Mode, map text-white and all headings unconditionally to dark slate */
+html.light .text-white,
+html:not(.dark) .text-white,
+html.light h1,
+html.light h2,
+html.light h3,
+html.light h4,
+html:not(.dark) h1,
+html:not(.dark) h2,
+html:not(.dark) h3,
+html:not(.dark) h4 {
   color: #0f172a !important;
 }
 

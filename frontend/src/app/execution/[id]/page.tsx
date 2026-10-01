@@ -117,7 +117,7 @@ export default function ExecutionPage({ params }: { params: Promise<{ id: string
           </div>
 
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               Live Pipeline Execution
             </h1>
             <span

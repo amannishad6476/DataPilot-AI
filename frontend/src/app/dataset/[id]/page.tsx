@@ -102,7 +102,7 @@ export default function DatasetPage({ params }: { params: Promise<{ id: string }
           </div>
 
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
               <Table2 className="w-7 h-7 text-cyan-400" />
               <span>Intelligence Dataset</span>
             </h1>
