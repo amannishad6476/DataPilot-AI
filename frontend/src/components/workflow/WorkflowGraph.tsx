@@ -15,6 +15,7 @@ import { WorkflowStepPlan, StepExecutionStatus } from '@/lib/types';
 import { computeWorkflowGraph } from '@/lib/graph-layout';
 import { CustomStepNode } from './CustomStepNode';
 import { StepInspectorDrawer } from './StepInspectorDrawer';
+import { useTheme } from '@/lib/theme';
 
 interface WorkflowGraphProps {
   steps: WorkflowStepPlan[];
@@ -50,6 +51,9 @@ export function WorkflowGraph({ steps, stepStatuses = EMPTY_STATUSES, height = '
     return (stepStatuses || EMPTY_STATUSES).find((s) => s.step_id === selectedStepId) || null;
   }, [selectedStepId, stepStatuses]);
 
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
+
   return (
     <div className="relative w-full rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden shadow-2xl" style={{ height }}>
       {/* Visual Canvas Header */}
@@ -73,11 +77,11 @@ export function WorkflowGraph({ steps, stepStatuses = EMPTY_STATUSES, height = '
         maxZoom={1.5}
         className="bg-slate-950"
       >
-        <Background color="#1e293b" gap={24} size={1} />
+        <Background color={isLight ? "#cbd5e1" : "#1e293b"} gap={24} size={1} />
         <Controls className="!bg-slate-900 !border-slate-800 !text-slate-300" />
         <MiniMap
           nodeColor="#3b82f6"
-          maskColor="rgba(15, 23, 42, 0.7)"
+          maskColor={isLight ? "rgba(241, 245, 249, 0.7)" : "rgba(15, 23, 42, 0.7)"}
           className="!bg-slate-900/90 !border-slate-800 !rounded-lg overflow-hidden hidden sm:block"
         />
       </ReactFlow>
